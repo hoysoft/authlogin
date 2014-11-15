@@ -1,24 +1,36 @@
 package authlogin
 
 import (
-	//"fmt"
+	"encoding/json"
+	"fmt"
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/config"
 	"github.com/astaxie/beego/session"
-	//	"time"
 	"html/template"
+	"strings"
+	"time"
 	//"log"
-	//"strconv"
-	"bytes"
+	"strconv"
+	//"bytes"
+	"io"
+	"io/ioutil"
+	"net/url"
+	//	"mime"
+	"os"
+	"path"
+	"runtime"
 )
 
-type MethodFunc func(*beego.Controller, string, string, bool)
+type ActionMethodBefoerFunc func(c *beego.Controller, method string, action string) (abort bool)
 
 var (
 	globalSessions *session.Manager
 
-	loginHtmlString  string
-	mLayout, LoginT  *template.Template
-	actionMethodFunc MethodFunc
+	loginHtmlString        string
+	mLayout, LoginT        *template.Template
+	actionMethodBefoerFunc ActionMethodBefoerFunc
+	AuthViewPath           string //
+	cnf                    config.ConfigContainer
 )
 
 type UserController struct {
@@ -29,33 +41,18 @@ func init() {
 	globalSessions, _ = session.NewManager("memory", `{"cookieName":"gosessionid", "enableSetCookie,omitempty": true, "gclifetime":3600, "maxLifetime": 3600, "secure": false, "sessionIDHashFunc": "sha1", "sessionIDHashKey": "booksmanage", "cookieLifeTime": 3600, "providerConfig": ""}`)
 	go globalSessions.GC()
 
-	//var err error
+	//如果views文件是否存在，复制
+	//path := beego.ViewsPath + "/authlogin"
+	_, filename, _, _ := runtime.Caller(1)
+	spath := path.Join(path.Dir(filename), "views")
+	dpath := path.Join(beego.ViewsPath, "authlogin")
+	copyFile(dpath, spath, "_login.html")
+	copyFile(dpath, spath, "_all.html")
+	copyFile(dpath, spath, "paginator.tpl")
 
-	mLayout, _ = template.New("layout").Parse(`<!DOCTYPE html>
-<html>
-<head><title>{{.Status}} Not Authorized</title></head>
-<body>
- {{.LayoutContent}}
-</body>
-</html>`)
-
-	LoginT, _ = template.New("LayoutContent").Parse(`
-<div class="login">
-<h1>{{.Status}} Not Authorized - {{.Message}}</h1>
-<form action="{{.Url}}" method="post">
-<label for="username">username: </label>
-<input type="text" name="username" id="username" value="" placeholder="(Enter your username)"><br>
-<label for="password">Password: </label>
-<input type="password" name="password" id="password" value="" placeholder="(Enter your password)"><br>
-<input type='checkbox' name='save_login' value='1' checked='checked'/> 记住我的登录信息<br>
-<br>
-<a href="/user/reset-pwd">忘记登录密码？</a> 
-<input type='button' value='注册'/> 
-<input type="submit" value="登录">
-
-</form>
-</div>
-`)
+	copyFile("conf", path.Dir(filename), "authlogin.conf")
+	//读取authlogin配置
+	cnf, _ = config.NewConfig("ini", "conf/authlogin.conf")
 
 	//增加路由
 	beego.Router("/user", &UserController{})
@@ -63,13 +60,55 @@ func init() {
 
 }
 
-func ActionMethod(methodFunc MethodFunc) {
-	actionMethodFunc = methodFunc
+func ActionMethodBefoer(methodFunc ActionMethodBefoerFunc) {
+	actionMethodBefoerFunc = methodFunc
+}
+
+func readFile(pathfilename string) string {
+	//获取源文件代码路径 (ref)：
+	_, filename, _, _ := runtime.Caller(1)
+	fi, err := os.Open(path.Join(path.Dir(filename), pathfilename))
+
+	//	fi, err := os.Open(f)
+	if err != nil {
+		panic(err)
+	}
+	defer fi.Close()
+	fd, err := ioutil.ReadAll(fi)
+	// fmt.Println(string(fd))
+	return string(fd)
+}
+
+func copyFile(dstPath, srcPath, filename string) (written int64, err error) {
+	dstName := path.Join(dstPath, filename)
+	srcName := path.Join(srcPath, filename)
+	src, err := os.Open(srcName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer src.Close()
+	//文件存在不覆盖
+	if _, err = os.Stat(dstName); err == nil {
+		return
+	}
+
+	fmt.Println("dir:%s", dstName)
+	e := os.MkdirAll(path.Dir(dstName), os.ModePerm)
+	if e != nil {
+		fmt.Println(e)
+	}
+	dst, err := os.OpenFile(dstName, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		return
+	}
+	defer dst.Close()
+	return io.Copy(dst, src)
 }
 
 // 检测用户是否登录
 func LoginUser(this *beego.Controller, autoRedirect bool) *User {
-	sess := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
+	sess, _ := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
 	defer sess.SessionRelease(this.Ctx.ResponseWriter)
 	userid := sess.Get("Uid")
 	if userid != nil {
@@ -85,49 +124,128 @@ func LoginUser(this *beego.Controller, autoRedirect bool) *User {
 	return nil
 }
 
+func runActionMethodBefoer(c *UserController, method string, action string) bool {
+	if actionMethodBefoerFunc != nil {
+		return actionMethodBefoerFunc(&c.Controller, method, action)
+	}
+	return false
+}
+
+func (this *UserController) SetPaginator(per int, nums int64) *Paginator {
+	p := NewPaginator(this.Ctx.Request, per, nums)
+	this.Data["paginator"] = p
+	return p
+}
+
+type category struct {
+	Id         string
+	IsSelected bool
+	Value      string
+}
+
 func (this *UserController) Get() {
-	//this.Layout = tpLayout                    // 后台管理模板布局文件
+	sess, _ := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
+	defer sess.SessionRelease(this.Ctx.ResponseWriter)
+
 	action := this.Ctx.Input.Param(":action") // 用户的添加、修改或删除
 
 	switch action {
 	case "": //用户列表
+		p := this.Ctx.Request.URL.Query().Get("p")
+		pageNo, _ := strconv.Atoi(p)
+		if pageNo == 0 {
+			pageNo = 1
+		}
+		var fields []string
+		var sortby []string
+		var order []string
+		//	fields := []string{"id", "email", "username", "nickname", "status", "Createdtime", "Lastlogintime"}
+		var limit int64 = 6 //每页10行显示
+		var offset int64 = (int64(pageNo) - 1) * limit
+		var query map[string]string = map[string]string{"source": "0"}
+
+		users, count, _ := GetAllUser(query, fields, sortby, order, offset, limit)
+		//fmt.Println("user:", users)
+		this.Data["Users"] = &users
+		//count, _ := GetUserCount()
+		_ = this.SetPaginator(int(limit), count)
+
+		usersources := []*category{
+			&category{"0", true, "本地用户"},
+			&category{"1", false, "LDAP用户"},
+		}
+		this.Data["usersources"] = usersources
+
+		userstates := []*category{
+			&category{"-1", true, "全部"},
+			&category{"0", true, "注册"},
+			&category{"1", false, "激活"},
+			&category{"2", false, "锁定"},
+		}
+		this.Data["userstates"] = userstates
+		this.Data["authLoginFormTitle"] = "" //cnf.String("user_all::title")
+		this.TplNames = "authlogin/_all.html"
+		if runActionMethodBefoer(this, "Get", action) {
+			return
+		}
+		//s := readFile("test.txt")
+		//this.Ctx.WriteString(s)
+		return
+	case "export": //导出用户列表
 		users := GetAllUse_sm()
-		this.Data["Users"] = users
+		lang, err := json.Marshal(users)
+		fmt.Println("eeee")
+		if err == nil {
+			userAgent := strings.ToLower(this.Ctx.Request.UserAgent())
+			newName := time.Now().Format("2006-01-02_15:04:05") + ".users"
+			filename := ""
 
-	case "login": // 用户登录
-		data := make(map[string]interface{})
-		data["Status"] = "YYYY"
-		data["Url"] = "/user/login"
-
-		buff := bytes.NewBufferString("")
-		LoginT.Execute(buff, data)
-
-		if actionMethodFunc != nil {
-			defaultContent := true
-			actionMethodFunc(&this.Controller, "Get", "login", defaultContent)
-			if !defaultContent {
-				return
+			switch {
+			case strings.Index(userAgent, "msie") != -1: // IE浏览器，只能采用URLEncoder编码
+				filename = "=" + url.QueryEscape(newName)
+				break
+			case strings.Index(userAgent, "firefox") != -1: // FireFox浏览器，可以使用MimeUtility或filename*或ISO编码的中文输出
+				filename = "*=UTF-8''" + url.QueryEscape(newName)
+				break
+			case strings.Index(userAgent, "applewebkit") != -1: // Chrome浏览器，只能采用MimeUtility编码或ISO编码的中文输出
+				//  new_filename = MimeUtility.encodeText(filename, "UTF8", "B");
+				//  rtn = "filename=\"" + new_filename + "\"";
+				//  rtn = "filename=\"" + new String(filename.getBytes("UTF-8"),"ISO8859-1") + "\"";
+				filename = `="` + url.QueryEscape(newName) + `"`
+				break
+			case strings.Index(userAgent, "safari") != -1: // Safari浏览器，只能采用ISO编码的中文输出
+				filename = `="` + newName + `"`
+				break
+			case strings.Index(userAgent, "opera") != -1: // Opera浏览器只能采用filename*
+				filename = `*="UTF-8''` + url.QueryEscape(newName) + `"`
+				break
+			default:
+				filename = "=" + url.QueryEscape(newName)
 			}
 
-			this.HtmlContent = buff.String()
+			this.Ctx.ResponseWriter.Header().Set("Content-Type", "application/octet-stream")
+			this.Ctx.ResponseWriter.Header().Set("Content-Disposition:", "attachment;filename"+filename)
+			this.Ctx.WriteString(string(lang))
+		}
+	case "import": //导入用户列表
+	case "login": // 用户登录
+		this.Data["authLoginFormTitle"] = "用户登录"
+		//this.Data["authLoginFormTitle"] = cnf.String("login::title")
+		this.TplNames = "authlogin/_login.html"
+		if runActionMethodBefoer(this, "Get", action) {
 			return
 		}
 
-		mLayout.Execute(this.Ctx.ResponseWriter, data)
-
-		//this.Ctx.WriteString(loginT)
-
-		//case "logout": // 用户退出
-		//	this.Layout = "layout_one.tpl"     // 用户登录模板布局文件
-		//	this.DelSession("account")         // 删除session中的用户登录信息
-		//	this.TplNames = "admin/logout.tpl" // 页面模板文件
 	case "add": //注册用户
 	//this.Ctx.WriteString(loginT)
 	case "reset-pwd": //密码复位
 	case "logout": // 用户退出
-		sess := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
-		defer sess.SessionRelease(this.Ctx.ResponseWriter)
+
 		sess.Delete("Uid")
+		if runActionMethodBefoer(this, "Get", action) {
+			return
+		}
+		fmt.Println("FFFFFFFFFFFFFFFFFFFFFFFFF")
 		this.Ctx.Redirect(302, "/")
 	}
 
@@ -252,7 +370,7 @@ func (this *UserController) Post() {
 		} else {
 			this.Data["Message"] = "登录成功！"
 			// 保存用户登录信息
-			sess := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
+			sess, _ := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
 			defer sess.SessionRelease(this.Ctx.ResponseWriter)
 			sess.Set("Uid", user.Id)
 			this.Ctx.Redirect(302, "/v1/site")
@@ -294,4 +412,5 @@ func (this *UserController) Post() {
 		//	}
 
 	}
+
 }
