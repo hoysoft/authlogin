@@ -7,19 +7,21 @@ import (
 	"github.com/astaxie/beego/orm"
 	"io"
 	"reflect"
+	//"strconv"
 	"strings"
 	"time"
 )
 
 // 用户表
 type User struct {
-	Id            int    `orm:"auto;PK"` // 用户ID
-	Email         string `orm:"size(32)` // 用户Email
-	Username      string `orm:"size(32)` // 用户名
-	Password      string `orm:"size(32)` // 密码；加密形式
-	Nickname      string `orm:"size(32)"`
-	Remark        string `orm:"size(200);null"`
+	Id            int    `orm:"auto;PK"`        // 用户ID
+	Email         string `orm:"size(32)`        // 用户Email
+	Username      string `orm:"size(32)`        // 用户名
+	Password      string `orm:"size(32)`        // 密码；加密形式
+	Nickname      string `orm:"size(32)"`       //昵称
+	Remark        string `orm:"size(200);null"` //备注
 	Status        int
+	Source        int       `orm:"size(12);0`                                 //用户来源：0-本地用户，1-LDAP用户
 	Createdtime   time.Time `orm:"auto_now_add;type(datetime)"`               // 用户创建时间
 	Updatedtime   time.Time `orm:"auto_now;type(datetime)"`                   // 用户最后修改时间
 	Lastlogintime time.Time `orm:"column(lastlogintime);type(datetime);null"` // 用户最后登录时间
@@ -32,8 +34,7 @@ func init() {
 
 //空表时增加默认管理帐号
 func autoAddTable() {
-	o := orm.NewOrm()
-	count, _ := o.QueryTable("user").Count()
+	count, _ := GetUserCount()
 
 	if count == 0 {
 		u := User{Id: 0, Username: "admin", Password: Sha1("888888")}
@@ -59,7 +60,20 @@ func AuthUser(name string, password string) (*User, bool) {
 		user.Lastlogintime = time.Now()
 		UpdateUserById(&user)
 	}
+
+	//for i := 0; i < 100; i++ {
+	//	u := User{Username: "admin" + strconv.Itoa(i), Password: Sha1("888888")}
+	//	AddUser(&u)
+	//}
+
 	return &user, err == nil
+}
+
+func GetUserCount() (count int64, err error) {
+	o := orm.NewOrm()
+	count, err = o.QueryTable("user").Count()
+	fmt.Println("count--", err)
+	return
 }
 
 //增加用户
@@ -67,6 +81,7 @@ func AddUser(m *User) (id int64, err error) {
 	o := orm.NewOrm()
 	id, err = o.Insert(m)
 	return
+
 }
 
 //修改用户
@@ -111,8 +126,14 @@ func GetAllUse_sm() *[]User {
 	return &l
 }
 
+// @Param	query	query	string	false	"Filter. e.g. col1:v1,col2:v2 ..."
+// @Param	fields	query	string	false	"Fields returned. e.g. col1,col2 ..."
+// @Param	sortby	query	string	false	"Sorted-by fields. e.g. col1,col2 ..."
+// @Param	order	query	string	false	"Order corresponding to each sortby field, if single value, apply to all sortby fields. e.g. desc,asc ..."
+// @Param	limit	query	string	false	"Limit the size of result set. Must be an integer"
+// @Param	offset	query	string	false	"Start position of result set. Must be an integer"
 func GetAllUser(query map[string]string, fields []string, sortby []string, order []string,
-	offset int64, limit int64) (ml []interface{}, err error) {
+	offset int64, limit int64) (ml []interface{}, count int64, err error) {
 	o := orm.NewOrm()
 	qs := o.QueryTable(new(User))
 	// query k=v
@@ -121,6 +142,8 @@ func GetAllUser(query map[string]string, fields []string, sortby []string, order
 		k = strings.Replace(k, ".", "__", -1)
 		qs = qs.Filter(k, v)
 	}
+	//记录数
+	count, _ = qs.Count()
 	// order by:
 	var sortFields []string
 	if len(sortby) != 0 {
@@ -133,7 +156,7 @@ func GetAllUser(query map[string]string, fields []string, sortby []string, order
 				} else if order[i] == "asc" {
 					orderby = v
 				} else {
-					return nil, errors.New("Error: Invalid order. Must be either [asc|desc]")
+					return nil, count, errors.New("Error: Invalid order. Must be either [asc|desc]")
 				}
 				sortFields = append(sortFields, orderby)
 			}
@@ -147,16 +170,16 @@ func GetAllUser(query map[string]string, fields []string, sortby []string, order
 				} else if order[0] == "asc" {
 					orderby = v
 				} else {
-					return nil, errors.New("Error: Invalid order. Must be either [asc|desc]")
+					return nil, count, errors.New("Error: Invalid order. Must be either [asc|desc]")
 				}
 				sortFields = append(sortFields, orderby)
 			}
 		} else if len(sortby) != len(order) && len(order) != 1 {
-			return nil, errors.New("Error: 'sortby', 'order' sizes mismatch or 'order' size is not 1")
+			return nil, count, errors.New("Error: 'sortby', 'order' sizes mismatch or 'order' size is not 1")
 		}
 	} else {
 		if len(order) != 0 {
-			return nil, errors.New("Error: unused 'order' fields")
+			return nil, count, errors.New("Error: unused 'order' fields")
 		}
 	}
 
@@ -178,9 +201,9 @@ func GetAllUser(query map[string]string, fields []string, sortby []string, order
 				ml = append(ml, m)
 			}
 		}
-		return ml, nil
+		return ml, count, nil
 	}
-	return nil, err
+	return nil, count, err
 }
 
 //对字符串进行SHA1哈希
