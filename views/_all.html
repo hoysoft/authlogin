@@ -1,0 +1,73 @@
+<!-- border:1px green solid;-->
+
+<style>
+
+.div1 {width:100%;overflow:hidden;zoom:1;}
+.div2 {float:left;}
+.div3 {float:right;padding-top:35px;display:inline;}
+.div3 select {float:left;display:inline;}
+.div3 input {float:right;display:inline;}
+th {text-align:center}
+td {text-align:center}
+</style>
+
+<div class="div1" >
+	<div class="div2"><h1>{{.authLoginFormTitle}}</h1></div>
+	<div class="div3"> 
+	<button id="btn_exportuser"  onClick="javascript:location.href='/user/export';">导出用户</button>
+ 
+ 
+	<input id="btn_importuser" type='button' value='导入用户'/> 
+	 <input id="btn_synuser" type='button' value='同步用户' style="display:none"/> 
+	<input id="btn_adduser" type='button' value='新增用户'/> 
+	&nbsp;
+    <select class="form-horizontal form-control input-sm" name="category" id="category" onchange="switchsource(this.value)" style="width: 100px">
+     {{range .usersources}}
+     <option value={{.Id}} {{if .IsSelected}} select="selected"{{end}}>{{.Value}}</option>
+     {{end}}
+    </select>
+    
+   
+	
+	
+
+	</div>
+	
+</div>
+ <hr style="padding-top:-10px;">
+
+
+<table class="user-list table table-striped table-hover">
+<thead>
+    <tr><th>用户名</th><th>姓名</th><th>E-mail</th><th>注册时间</th><th>最后登录</th><th>
+	 <select class="form-horizontal form-control input-sm"  id="state" onchange="switchstate(this.value)" style="width: 78px;border-width:0px;background-color: transparent;margin:-2px -18px -2px -2px;" >
+     {{range .userstates}}
+        <option value={{.Id}} {{if .IsSelected}} select="selected"{{end}}>{{.Value}}</option>
+     {{end}}
+    </select>
+	</th><th>管理</th></tr>
+</thead>
+<tbody>
+    {{range .Users}}
+    <tr><td>{{.Nickname}}</td><td>{{.Username}}</td><td>{{.Email}}</td><td>{{.Createdtime.Format "2006-01-02 15:04:05" }}</td><td>{{.Lastlogintime.Format "2006-01-02 15:04:05"}}</td><td>{{.Status}}</td>
+	<td><span class="action">
+	<a href="/user/edit/{{.Id}}">修改</a></span>&nbsp;<span class="action"><a href="/user/delete/{{.Id}}">删除</a></span>&nbsp;<span class="action"><a href="/user/delete/{{.Id}}">锁定</a></span></td></tr>
+    {{end}}
+</tbody>
+</table><!-- End .user-list -->
+
+ 
+{{template "authlogin/paginator.tpl" .}}
+<script language="javascript">
+function switchsource(v)
+{
+    if (v=="0") {
+		document.getElementById("btn_adduser").style.display="block"; 
+		document.getElementById("btn_synuser").style.display="none";   
+    }
+    else {
+      document.getElementById("btn_adduser").style.display="none"; 
+		document.getElementById("btn_synuser").style.display="block";   
+    }
+}</script >
+ 

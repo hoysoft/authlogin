@@ -1,0 +1,16 @@
+<h1>{{.authLoginFormTitle}}</h1>
+ <hr>
+<center>
+<form action="{{.Url}}" method="post">
+<label for="username">username: </label>
+<input type="text" name="username" id="username" value="{{.uname}}" placeholder="(Enter your username)"><br>
+<label for="password">Password: </label>
+<input type="password" name="password" id="password" value="" placeholder="(Enter your password)"><br>
+<input type='checkbox' name='save_login' value='1' checked='checked'/> 记住我的登录信息<br>
+<br>
+<a href="/user/reset-pwd">忘记登录密码？</a> 
+<input type='button' value='注册'/> 
+<input type="submit" value="登录">
+
+</form>
+</center>
