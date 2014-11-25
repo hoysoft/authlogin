@@ -37,7 +37,7 @@ func autoAddTable() {
 	count, _ := GetUserCount()
 
 	if count == 0 {
-		u := User{Id: 0, Username: "admin", Password: Sha1("888888")}
+		u := User{Id: 0, Username: "admin", Password: Sha1("admin")}
 		_, er := AddUser(&u)
 		if er != nil {
 			fmt.Println("add user error:%s", er)

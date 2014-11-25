@@ -6,6 +6,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/config"
 	"github.com/astaxie/beego/session"
+	//"github.com/coscms/forms"
 	"html/template"
 	"strings"
 	"time"
@@ -41,6 +42,11 @@ func init() {
 	globalSessions, _ = session.NewManager("memory", `{"cookieName":"gosessionid", "enableSetCookie,omitempty": true, "gclifetime":3600, "maxLifetime": 3600, "secure": false, "sessionIDHashFunc": "sha1", "sessionIDHashKey": "booksmanage", "cookieLifeTime": 3600, "providerConfig": ""}`)
 	go globalSessions.GC()
 
+	//e := os.MkdirAll(path.Join(beego.StaticDir, "files"), os.ModePerm)
+	//if e != nil {
+	//	fmt.Println(e)
+	//}
+
 	//如果views文件是否存在，复制
 	//path := beego.ViewsPath + "/authlogin"
 	_, filename, _, _ := runtime.Caller(1)
@@ -54,9 +60,13 @@ func init() {
 	//读取authlogin配置
 	cnf, _ = config.NewConfig("ini", "conf/authlogin.conf")
 
+	//if err != nil {
+	//	fmt.Println("eeeee:", err)
+	//}
 	//增加路由
 	beego.Router("/user", &UserController{})
 	beego.Router("/user/:action", &UserController{})
+	beego.Router("/user/:action/:id", &UserController{})
 
 }
 
@@ -143,12 +153,18 @@ type category struct {
 	Value      string
 }
 
+type Form_User_login struct {
+	Username  string `form_label:"用户:" form_value:"test" form_fieldset:"fff" form_id:"us"`
+	Password1 string `form_widget:"password" form_label:"密码:" form_fieldset:"fff" form_id:"pa"`
+	SkipThis  int    `form_options:"-"`
+}
+
 func (this *UserController) Get() {
 	sess, _ := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
 	defer sess.SessionRelease(this.Ctx.ResponseWriter)
 
 	action := this.Ctx.Input.Param(":action") // 用户的添加、修改或删除
-
+	this.Data["cnf"] = cnf
 	switch action {
 	case "": //用户列表
 		p := this.Ctx.Request.URL.Query().Get("p")
@@ -183,8 +199,8 @@ func (this *UserController) Get() {
 			&category{"2", false, "锁定"},
 		}
 		this.Data["userstates"] = userstates
-		this.Data["authLoginFormTitle"] = "" //cnf.String("user_all::title")
-		this.TplNames = "authlogin/_all.html"
+		this.Data["Title"] = cnf.String("user_all::title")
+		this.TplNames = "authlogin/user_all.html"
 		if runActionMethodBefoer(this, "Get", action) {
 			return
 		}
@@ -194,7 +210,6 @@ func (this *UserController) Get() {
 	case "export": //导出用户列表
 		users := GetAllUse_sm()
 		lang, err := json.Marshal(users)
-		fmt.Println("eeee")
 		if err == nil {
 			userAgent := strings.ToLower(this.Ctx.Request.UserAgent())
 			newName := time.Now().Format("2006-01-02_15:04:05") + ".users"
@@ -227,26 +242,62 @@ func (this *UserController) Get() {
 			this.Ctx.ResponseWriter.Header().Set("Content-Disposition:", "attachment;filename"+filename)
 			this.Ctx.WriteString(string(lang))
 		}
+	case "edit": //用户编辑
+		s := this.Ctx.Input.Param(":id")
+		uid, err := strconv.Atoi(s)
+		if err != nil {
+
+		}
+
+		eUser, err := GetUserById(uid)
+		if err != nil {
+
+		}
+		this.Data["eUser"] = &eUser
+		this.Data["Title"] = cnf.String("user_edit::title")
+		this.TplNames = "authlogin/user_edit.html"
+		if runActionMethodBefoer(this, "Get", action) {
+			return
+		}
 	case "import": //导入用户列表
+		this.Data["Title"] = cnf.String("user_import::title")
+		this.TplNames = "authlogin/user_import.html"
+		if runActionMethodBefoer(this, "Get", action) {
+			return
+		}
 	case "login": // 用户登录
-		this.Data["authLoginFormTitle"] = "用户登录"
-		//this.Data["authLoginFormTitle"] = cnf.String("login::title")
-		this.TplNames = "authlogin/_login.html"
+		//_, err := cnf.GetSection("login")
+		//fmt.Println("seeeeeeeee:", err)
+		this.Data["Title"] = cnf.String("login::title")
+
+		this.TplNames = "authlogin/login.html"
 		if runActionMethodBefoer(this, "Get", action) {
 			return
 		}
 
 	case "add": //注册用户
-	//this.Ctx.WriteString(loginT)
-	case "reset-pwd": //密码复位
-	case "logout": // 用户退出
-
-		sess.Delete("Uid")
+		this.TplNames = "authlogin/user_add.html"
+		this.Data["Title"] = cnf.String("user_add::title")
 		if runActionMethodBefoer(this, "Get", action) {
 			return
 		}
-		fmt.Println("FFFFFFFFFFFFFFFFFFFFFFFFF")
-		this.Ctx.Redirect(302, "/")
+	case "delete": // 修改用户
+		s := this.Ctx.Input.Param(":id")
+		uid, err := strconv.Atoi(s)
+		if err != nil {
+
+		}
+
+		DeleteUser(uid)
+
+		this.Ctx.WriteString("<script> history.back(1); </script>")
+	case "reset-pwd": //密码复位
+	case "logout": // 用户退出
+		sess.Delete("Uid")
+		this.TplNames = "authlogin/logout.html"
+		if runActionMethodBefoer(this, "Get", action) {
+			return
+		}
 	}
 
 }
@@ -255,107 +306,119 @@ func (this *UserController) Post() {
 	//	this.Layout = "layout_admin.tpl"           // 模板布局文件
 	action := this.Ctx.Input.Param(":action") // 用户的添加或修改
 	switch action {
-	//case "add": // 添加用户
-	//	email := this.Input().Get("email")            // 用户E-mail
-	//	name := this.Input().Get("name")              // 用户名
-	//	password := this.Input().Get("password")      // 密码
-	//	rePassword := this.Input().Get("re-password") // 重复输入的密码
+	case "add": // 添加用户
+		user := User{}
+		user.Email = this.Input().Get("email")        // 用户E-mail
+		user.Username = this.Input().Get("name")      // 用户名
+		password := this.Input().Get("password")      // 密码
+		rePassword := this.Input().Get("re-password") // 重复输入的密码
+		this.TplNames = "authlogin/user_add.html"
+		this.Data["eUser"] = &user
+		this.Data["Title"] = cnf.String("user_add::title")
+		// 检测E-mail或密码是否为空
+		if user.Email == "" || user.Username == "" {
+			this.Data["Message"] = "E-mail或用户名为空"
+			return
+		}
 
-	//	// 检测E-mail或密码是否为空
-	//	if email == "" || name == "" {
-	//		this.Data["Message"] = "E-mail或用户名为空"
-	//		this.Data["Email"] = email
-	//		this.Data["Name"] = name
-	//		this.Data["Password"] = password
-	//		this.TplNames = "admin/add_user.tpl"
-	//		return
-	//	}
+		// 如果两次输入的密码不一致，需重新填写
+		if password != rePassword {
+			this.Data["Message"] = "两次输入的密码不一致"
+			return
+		}
 
-	//	// 如果两次输入的密码不一致，需重新填写
-	//	if password != rePassword {
-	//		this.Data["Message"] = "两次输入的密码不一致"
-	//		this.Data["Email"] = email
-	//		this.Data["Name"] = name
-	//		this.Data["Password"] = password
-	//		this.TplNames = "admin/add_user.tpl"
-	//		return
-	//	}
+		// 检查E-mail或用户名是否已存在
+		//orm = InitDb()
+		//user := User{}
+		//err = orm.Where("email=? or name=?", email, name).Find(&user)
+		//if err == nil {
+		//	this.Data["Message"] = "E-mail或用户名已存在"
+		//	this.Data["Email"] = email
+		//	this.Data["Name"] = name
+		//	this.Data["Password"] = password
+		//	this.TplNames = "admin/add_user.tpl"
+		//	return
+		//}
 
-	//	// 检查E-mail或用户名是否已存在
-	//	orm = InitDb()
-	//	user := User{}
-	//	err = orm.Where("email=? or name=?", email, name).Find(&user)
-	//	if err == nil {
-	//		this.Data["Message"] = "E-mail或用户名已存在"
-	//		this.Data["Email"] = email
-	//		this.Data["Name"] = name
-	//		this.Data["Password"] = password
-	//		this.TplNames = "admin/add_user.tpl"
-	//		return
-	//	}
+		//保存用户
+		AddUser(&user)
 
-	//	// 保存用户
-	//	orm = InitDb()
-	//	user = User{}
-	//	user.Email = email
-	//	user.Name = name
-	//	user.Password = Sha1(password)
-	//	user.Created = time.Now()
-	//	err = orm.Save(&user)
-	//	Check(err)
-	//	Debug("User `%s` added.", user)
+		this.Ctx.Redirect(302, "/user/") // 返回用户列表页面
+	case "edit": // 修改用户
+		s := this.Ctx.Input.Param(":id") // 用户ID
+		uid, err := strconv.Atoi(s)
+		if err != nil {
 
-	//	this.Ctx.Redirect(302, "/user/") // 返回用户列表页面
-	//case "edit": // 修改用户
-	//	id := this.Ctx.Input.Params(":id") // 用户ID
+		}
+		user := User{}
+		user.Id = uid
+		user.Email = this.Input().Get("email")        // 用户E-mail
+		user.Username = this.Input().Get("name")      // 用户名
+		password := this.Input().Get("password")      // 密码
+		rePassword := this.Input().Get("re-password") // 重复输入的密码
 
-	//	email := this.Input().Get("email")            // 用户E-mail
-	//	name := this.Input().Get("name")              // 用户名
-	//	password := this.Input().Get("password")      // 密码
-	//	rePassword := this.Input().Get("re-password") // 重复输入的密码
+		this.TplNames = "authlogin/user_edit.html"
+		this.Data["eUser"] = &user
+		this.Data["Title"] = cnf.String("user_edit::title")
+		if runActionMethodBefoer(this, "Post", action) {
+			return
+		}
+		// 检测E-mail或密码是否为空
+		if user.Email == "" || user.Username == "" {
+			this.Data["Message"] = "E-mail或用户名为空"
+			return
+		}
 
-	//	// 检测E-mail或密码是否为空
-	//	if email == "" || name == "" {
-	//		this.Data["Message"] = "E-mail或用户名为空"
-	//		this.Data["Email"] = email
-	//		this.Data["Name"] = name
-	//		this.Data["Password"] = password
-	//		this.TplNames = "admin/add_user.tpl"
-	//		return
-	//	}
+		// 如果两次输入的密码不一致，需重新填写
+		if password != rePassword {
+			this.Data["Message"] = "两次输入的密码不一致"
+			return
+		}
 
-	//	// 如果两次输入的密码不一致，需重新填写
-	//	if password != rePassword {
-	//		this.Data["Message"] = "两次输入的密码不一致"
-	//		this.Data["Email"] = email
-	//		this.Data["Name"] = name
-	//		this.Data["Password"] = password
-	//		this.TplNames = "admin/add_user.tpl"
-	//		return
-	//	}
+		// 获得当前用户
 
-	//	// 获得当前用户
-	//	orm = InitDb()
-	//	user := User{}
-	//	err = orm.Where("id=?", id).Find(&user)
-	//	Check(err)
+		// 更新用户信息
+		if password != "" {
+			user.Password = Sha1(password)
+		}
+		user.Updatedtime = time.Now()
 
-	//	// 更新用户信息
-	//	user.Email = email
-	//	user.Name = name
-	//	if password != "" {
-	//		user.Password = Sha1(password)
-	//	}
-	//	user.Updated = time.Now()
+		// 保存用户信息
+		UpdateUserById(&user)
 
-	//	// 保存用户信息
-	//	err = orm.Save(&user)
-	//	Check(err)
+		this.Ctx.Redirect(302, "/user/") // 返回用户列表页面
+	case "import": //导入用户列表
+		f, _, err := this.GetFile("user_file")
+		if err != nil {
+			fmt.Println(err)
+		}
+		fd, err := ioutil.ReadAll(f)
+		//fmt.Println(fd)
+		u := []User{}
+		//var u []User
+		//	json.Unmarshal(fd, &u)
+		if err := json.Unmarshal(fd, &u); err == nil {
+			//处理导入用户列表
+			addCount := 0
+			for _, r := range u {
+				_, err = AddUser(&r)
+				if err != nil {
+					fmt.Println(err)
+				} else {
+					addCount++
+				}
+			}
+			fmt.Println("addcount:", addCount)
+		}
 
-	//	this.Ctx.Redirect(302, "/user/") // 返回用户列表页面
+	//	fmt.Println(handler.Filename)
+	//fmt.Println(u)
+	//	this.SaveToFile("user_file", "./static/files/"+"uploaded_file.txt")
+
 	case "login": // 用户登录
 		name := this.Ctx.Request.FormValue("username")     // 用户名
 		password := this.Ctx.Request.FormValue("password") // 用户密码
+		this.Data["Title"] = cnf.String("login::title")
 		// 检测用户名或密码是否为空
 		if name == "" || password == "" {
 			this.Data["Message"] = "用户名或密码为空"
