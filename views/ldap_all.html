@@ -1,0 +1,28 @@
+ {{template "authlogin/nav.tpl" .}}
+<h1>{{.Title}} 
+   <button  style="float:right;font-size:16px;margin-top:25px;" id="btn_addldap"  onClick="javascript:location.href='/ldap/add';">新增LDAP</button>
+</h1>
+ 
+ <hr style="padding-top:-10px;">
+
+
+	
+<center>
+<table class="user-list table table-striped table-hover">
+<thead>
+    <tr><th>名称</th><th>地址</th><th>BaseDN</th><th>过滤器</th><th>ldaps协议</th><th>创建时间</th><th>修改时间</th><th>
+	</th><th>管理</th></tr>
+</thead>
+<tbody>
+    {{range .Ldaps}}
+    <tr><td>{{.Name}}</td><td>{{.Host}}:{{.Port}}</td><td>{{.BaseDN}}</td>
+	<td>{{.Filter}}</td>
+	<td>{{.Ldaps}}</td>
+	     <td>{{.Createdtime.Format "2006-01-02 15:04:05" }}</td><td>{{.Updatedtime.Format "2006-01-02 15:04:05"}}</td>
+	<td><span class="action">
+	<a href="/ldap/edit/{{.Id}}">修改</a></span>&nbsp;<span class="action"><a href="/ldap/delete/{{.Id}}"  onclick="return confirm('确实要删除吗?')">删除</a></span></td></tr>
+    {{end}}
+</tbody>
+</table>
+
+{{template "authlogin/paginator.tpl" .}}

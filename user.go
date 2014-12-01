@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/config"
+
 	"github.com/astaxie/beego/session"
 	//"github.com/coscms/forms"
 	"html/template"
@@ -13,7 +13,7 @@ import (
 	//"log"
 	"strconv"
 	//"bytes"
-	"io"
+	//	"io"
 	"io/ioutil"
 	"net/url"
 	//	"mime"
@@ -31,7 +31,7 @@ var (
 	mLayout, LoginT        *template.Template
 	actionMethodBefoerFunc ActionMethodBefoerFunc
 	AuthViewPath           string //
-	cnf                    config.ConfigContainer
+	//cnf                    config.ConfigContainer
 )
 
 type UserController struct {
@@ -42,27 +42,6 @@ func init() {
 	globalSessions, _ = session.NewManager("memory", `{"cookieName":"gosessionid", "enableSetCookie,omitempty": true, "gclifetime":3600, "maxLifetime": 3600, "secure": false, "sessionIDHashFunc": "sha1", "sessionIDHashKey": "booksmanage", "cookieLifeTime": 3600, "providerConfig": ""}`)
 	go globalSessions.GC()
 
-	//e := os.MkdirAll(path.Join(beego.StaticDir, "files"), os.ModePerm)
-	//if e != nil {
-	//	fmt.Println(e)
-	//}
-
-	//如果views文件是否存在，复制
-	//path := beego.ViewsPath + "/authlogin"
-	_, filename, _, _ := runtime.Caller(1)
-	spath := path.Join(path.Dir(filename), "views")
-	dpath := path.Join(beego.ViewsPath, "authlogin")
-	copyFile(dpath, spath, "_login.html")
-	copyFile(dpath, spath, "_all.html")
-	copyFile(dpath, spath, "paginator.tpl")
-
-	copyFile("conf", path.Dir(filename), "authlogin.conf")
-	//读取authlogin配置
-	cnf, _ = config.NewConfig("ini", "conf/authlogin.conf")
-
-	//if err != nil {
-	//	fmt.Println("eeeee:", err)
-	//}
 	//增加路由
 	beego.Router("/user", &UserController{})
 	beego.Router("/user/:action", &UserController{})
@@ -89,33 +68,6 @@ func readFile(pathfilename string) string {
 	return string(fd)
 }
 
-func copyFile(dstPath, srcPath, filename string) (written int64, err error) {
-	dstName := path.Join(dstPath, filename)
-	srcName := path.Join(srcPath, filename)
-	src, err := os.Open(srcName)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer src.Close()
-	//文件存在不覆盖
-	if _, err = os.Stat(dstName); err == nil {
-		return
-	}
-
-	fmt.Println("dir:%s", dstName)
-	e := os.MkdirAll(path.Dir(dstName), os.ModePerm)
-	if e != nil {
-		fmt.Println(e)
-	}
-	dst, err := os.OpenFile(dstName, os.O_WRONLY|os.O_CREATE, os.ModePerm)
-	if err != nil {
-		return
-	}
-	defer dst.Close()
-	return io.Copy(dst, src)
-}
-
 // 检测用户是否登录
 func LoginUser(this *beego.Controller, autoRedirect bool) *User {
 	sess, _ := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
@@ -134,9 +86,9 @@ func LoginUser(this *beego.Controller, autoRedirect bool) *User {
 	return nil
 }
 
-func runActionMethodBefoer(c *UserController, method string, action string) bool {
+func runActionMethodBefoer(c *beego.Controller, method string, action string) bool {
 	if actionMethodBefoerFunc != nil {
-		return actionMethodBefoerFunc(&c.Controller, method, action)
+		return actionMethodBefoerFunc(c, method, action)
 	}
 	return false
 }
@@ -178,8 +130,8 @@ func (this *UserController) Get() {
 		//	fields := []string{"id", "email", "username", "nickname", "status", "Createdtime", "Lastlogintime"}
 		var limit int64 = 6 //每页10行显示
 		var offset int64 = (int64(pageNo) - 1) * limit
-		var query map[string]string = map[string]string{"source": "0"}
-
+		//var query map[string]string = map[string]string{"source": "0"}
+		var query map[string]string = map[string]string{}
 		users, count, _ := GetAllUser(query, fields, sortby, order, offset, limit)
 		//fmt.Println("user:", users)
 		this.Data["Users"] = &users
@@ -201,7 +153,7 @@ func (this *UserController) Get() {
 		this.Data["userstates"] = userstates
 		this.Data["Title"] = cnf.String("user_all::title")
 		this.TplNames = "authlogin/user_all.html"
-		if runActionMethodBefoer(this, "Get", action) {
+		if runActionMethodBefoer(&this.Controller, "Get", action) {
 			return
 		}
 		//s := readFile("test.txt")
@@ -256,13 +208,13 @@ func (this *UserController) Get() {
 		this.Data["eUser"] = &eUser
 		this.Data["Title"] = cnf.String("user_edit::title")
 		this.TplNames = "authlogin/user_edit.html"
-		if runActionMethodBefoer(this, "Get", action) {
+		if runActionMethodBefoer(&this.Controller, "Get", action) {
 			return
 		}
 	case "import": //导入用户列表
 		this.Data["Title"] = cnf.String("user_import::title")
 		this.TplNames = "authlogin/user_import.html"
-		if runActionMethodBefoer(this, "Get", action) {
+		if runActionMethodBefoer(&this.Controller, "Get", action) {
 			return
 		}
 	case "login": // 用户登录
@@ -271,17 +223,17 @@ func (this *UserController) Get() {
 		this.Data["Title"] = cnf.String("login::title")
 
 		this.TplNames = "authlogin/login.html"
-		if runActionMethodBefoer(this, "Get", action) {
+		if runActionMethodBefoer(&this.Controller, "Get", action) {
 			return
 		}
 
 	case "add": //注册用户
 		this.TplNames = "authlogin/user_add.html"
 		this.Data["Title"] = cnf.String("user_add::title")
-		if runActionMethodBefoer(this, "Get", action) {
+		if runActionMethodBefoer(&this.Controller, "Get", action) {
 			return
 		}
-	case "delete": // 修改用户
+	case "delete": // 删除用户
 		s := this.Ctx.Input.Param(":id")
 		uid, err := strconv.Atoi(s)
 		if err != nil {
@@ -295,7 +247,7 @@ func (this *UserController) Get() {
 	case "logout": // 用户退出
 		sess.Delete("Uid")
 		this.TplNames = "authlogin/logout.html"
-		if runActionMethodBefoer(this, "Get", action) {
+		if runActionMethodBefoer(&this.Controller, "Get", action) {
 			return
 		}
 	}
@@ -309,14 +261,14 @@ func (this *UserController) Post() {
 	case "add": // 添加用户
 		user := User{}
 		user.Email = this.Input().Get("email")        // 用户E-mail
-		user.Username = this.Input().Get("name")      // 用户名
+		user.Account = this.Input().Get("name")       // 用户名
 		password := this.Input().Get("password")      // 密码
 		rePassword := this.Input().Get("re-password") // 重复输入的密码
 		this.TplNames = "authlogin/user_add.html"
 		this.Data["eUser"] = &user
 		this.Data["Title"] = cnf.String("user_add::title")
 		// 检测E-mail或密码是否为空
-		if user.Email == "" || user.Username == "" {
+		if user.Email == "" || user.Account == "" {
 			this.Data["Message"] = "E-mail或用户名为空"
 			return
 		}
@@ -353,18 +305,18 @@ func (this *UserController) Post() {
 		user := User{}
 		user.Id = uid
 		user.Email = this.Input().Get("email")        // 用户E-mail
-		user.Username = this.Input().Get("name")      // 用户名
+		user.Account = this.Input().Get("name")       // 用户名
 		password := this.Input().Get("password")      // 密码
 		rePassword := this.Input().Get("re-password") // 重复输入的密码
 
 		this.TplNames = "authlogin/user_edit.html"
 		this.Data["eUser"] = &user
 		this.Data["Title"] = cnf.String("user_edit::title")
-		if runActionMethodBefoer(this, "Post", action) {
+		if runActionMethodBefoer(&this.Controller, "Post", action) {
 			return
 		}
 		// 检测E-mail或密码是否为空
-		if user.Email == "" || user.Username == "" {
+		if user.Email == "" || user.Account == "" {
 			this.Data["Message"] = "E-mail或用户名为空"
 			return
 		}

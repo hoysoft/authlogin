@@ -16,12 +16,12 @@ import (
 type User struct {
 	Id            int    `orm:"auto;PK"`        // 用户ID
 	Email         string `orm:"size(32)`        // 用户Email
-	Username      string `orm:"size(32)`        // 用户名
+	LastName      string `orm:"size(32)"`       //姓氏
+	FirstName     string `orm:"size(32)"`       //名字
 	Password      string `orm:"size(32)`        // 密码；加密形式
-	Nickname      string `orm:"size(32)"`       //昵称
+	Account       string `orm:"size(32)`        //用户登录名
 	Remark        string `orm:"size(200);null"` //备注
 	Status        int
-	Source        int       `orm:"size(12);0`                                 //用户来源：0-本地用户，1-LDAP用户
 	Createdtime   time.Time `orm:"auto_now_add;type(datetime)"`               // 用户创建时间
 	Updatedtime   time.Time `orm:"auto_now;type(datetime)"`                   // 用户最后修改时间
 	Lastlogintime time.Time `orm:"column(lastlogintime);type(datetime);null"` // 用户最后登录时间
@@ -37,7 +37,7 @@ func autoAddTable() {
 	count, _ := GetUserCount()
 
 	if count == 0 {
-		u := User{Id: 0, Username: "admin", Password: Sha1("admin")}
+		u := User{Id: 0, Account: "admin", Password: Sha1("admin")}
 		_, er := AddUser(&u)
 		if er != nil {
 			fmt.Println("add user error:%s", er)

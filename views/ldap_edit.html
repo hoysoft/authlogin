@@ -1,0 +1,61 @@
+<h1>{{.Title}}</h1>
+ <hr style="padding-top:-10px;">
+
+
+<form method="post" >
+ 
+ {{with .ldap}}
+<fieldset class="EditField" style="float:left;width:60%; height:280px"> 
+            <legend>认证模式</legend>  
+    <label class="control-label" for="Name">LDAP标识名: </label>
+	<input type="Text" id="Name" name="Name" placeholder="请输入LDAP标识名" value="{{.Name}}" />
+	<br>
+    <label class="control-label" for="Host">主机: </label>
+	<input type="Text" id="Host" name="Host" placeholder="请输入主机IP" value="{{.Host}}" />
+	 <br>
+	<label class="control-label" for="Port" >端口: </label>
+	<input type="text" name="Port"  style="width:50px" placeholder="例:389" value="{{.Port}}"  /> 
+	<input type="checkbox" name="ldaps" {{if .Ldaps }} checked{{end}}> LDAPS协议 
+	 <br>
+	<label class="control-label" for="MangerAccount">账号: </label>
+	<input type="text" name="MangerAccount"  placeholder="请输入账号" value="{{.MangerAccount}}"  /> 
+	<br>
+	<label class="control-label" for="Password">密码: </label>
+	<input type="text" name="Password"  placeholder="请输入密码" value="{{.Password}}"  /> 
+	<br>
+	<label class="control-label" for="BaseDN">BASE DN: </label>
+	<input type="text" name="BaseDN"  placeholder="请输入BASE DN" value="{{.BaseDN}}"  /> 
+	<br>
+	<label class="control-label" for="Filter">过滤器: </label>
+	<input type="text" name="Filter"  placeholder="请输入过滤字符" value="{{.Filter}}"  /> 
+	<br>
+	<label class="control-label" for="TimeOut">超时时长(秒): </label>
+	<input type="text" name="TimeOut"  placeholder="请输入超时时长" value="{{.TimeOut}}"  /> 
+
+ </fieldset>
+ <fieldset class="EditField" style="float:right;width:40%;height:280px"> 
+            <legend>属性</legend>  
+	<label class="control-label" for="PropUser_Account">登录名字段: </label>
+	<input type="Text" id="PropUser_Account" name="PropUser_Account" placeholder="请输入登录名字段" value="{{.PropUser_Account}}" />
+	<br>
+	<label class="control-label" for="PropUser_LastName">姓氏字段: </label>
+	<input type="Text" id="PropUser_LastName" name="PropUser_LastName" placeholder="请输入姓氏字段" value="{{.PropUser_LastName}}" />
+	<br>
+    <label class="control-label" for="PropUser_FirstName">名字字段: </label>
+	<input type="Text" id="PropUser_FirstName" name="PropUser_FirstName" placeholder="请输入名字字段" value="{{.PropUser_FirstName}}" />
+	<br>     
+    <label class="control-label" for="PropUser_Email">邮件字段: </label>
+	<input type="Text" id="PropUser_Email" name="PropUser_Email" placeholder="请输入邮件字段" value="{{.PropUser_Email}}" />
+
+ </fieldset>
+ 
+<center>
+  <hr style="padding-top:0px;">
+    <div class="control-group">
+        <div class="controls" style="float:right;">
+	        <input type="button"  class="btn" value="返回" onclick="javascript:history.back()" />
+            <button type="submit" class="btn btn-primary">提交</button>
+        </div>
+    </div>
+</form>
+ {{end}}
