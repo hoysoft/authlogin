@@ -15,7 +15,7 @@
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-9">
           <ul class="nav navbar-nav">
-            <li class="active"><a href="/">全局配置</a></li>
+            <li class="active"><a href="/admin">全局配置</a></li>
 
             <li><a href="/user">用户管理</a></li>
 			<li><a href="#">角色管理</a></li>

@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"github.com/astaxie/beego"
 
-	"github.com/astaxie/beego/session"
 	//"github.com/coscms/forms"
-	"html/template"
+	//	"html/template"
 	"strings"
 	"time"
 	//"log"
@@ -22,16 +21,14 @@ import (
 	"runtime"
 )
 
-type ActionMethodBefoerFunc func(c *beego.Controller, method string, action string) (abort bool)
-
 var (
-	globalSessions *session.Manager
+//globalSessions *session.Manager
 
-	loginHtmlString        string
-	mLayout, LoginT        *template.Template
-	actionMethodBefoerFunc ActionMethodBefoerFunc
-	AuthViewPath           string //
-	//cnf                    config.ConfigContainer
+//loginHtmlString        string
+//mLayout, LoginT        *template.Template
+//actionMethodBefoerFunc ActionMethodBefoerFunc
+//AuthViewPath           string //
+//cnf                    config.ConfigContainer
 )
 
 type UserController struct {
@@ -39,18 +36,12 @@ type UserController struct {
 }
 
 func init() {
-	globalSessions, _ = session.NewManager("memory", `{"cookieName":"gosessionid", "enableSetCookie,omitempty": true, "gclifetime":3600, "maxLifetime": 3600, "secure": false, "sessionIDHashFunc": "sha1", "sessionIDHashKey": "booksmanage", "cookieLifeTime": 3600, "providerConfig": ""}`)
-	go globalSessions.GC()
 
 	//增加路由
 	beego.Router("/user", &UserController{})
 	beego.Router("/user/:action", &UserController{})
 	beego.Router("/user/:action/:id", &UserController{})
 
-}
-
-func ActionMethodBefoer(methodFunc ActionMethodBefoerFunc) {
-	actionMethodBefoerFunc = methodFunc
 }
 
 func readFile(pathfilename string) string {

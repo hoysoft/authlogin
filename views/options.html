@@ -1,0 +1,30 @@
+ {{template "authlogin/nav.tpl" .}}
+<h1>{{.Title}}</h1>
+ 
+ <hr style="padding-top:-10px;">
+
+<form method="post">
+<label class="control-label" for="authMode">验证模式: </label>
+ <select class="form-horizontal form-control input-sm" name="authMode" id="authMode" onchange="switchsource(this.value)" style="width: 100px">
+{{range .authModes}}
+     <option   value="{{.Id}}" {{if .IsSelected}} selected="selected"{{end}}>{{.Value}}</option>
+{{end}}
+</select>
+	<br>
+ 
+ <label class="control-label" for="nameFromart">姓名格式: </label>
+ <select class="form-horizontal form-control input-sm" name="nameFromart" id="nameFromart" onchange="switchsource(this.value)" style="width: 100px">
+{{range .nameFromarts}}
+     <option   value={{.Id}} {{if .IsSelected}} selected="selected"{{end}}>{{.Value}}</option>
+{{end}}
+</select>
+	<br>
+	  <hr style="padding-top:0px;">
+    <div class="control-group">
+        <div class="controls" style="float:right;">
+	        <input type="button"  class="btn" value="复位" onclick="location.reload()" />
+            <button type="submit" class="btn btn-primary">提交</button>
+        </div>
+    </div>
+</form>
+ 

@@ -1,8 +1,15 @@
+ {{template "authlogin/nav.tpl" .}}
 <h1>{{.Title}}</h1>
  <hr style="padding-top:-10px;">
 
+<style type="text/css">
+	input {
+    float:right;
+	margin-right:185px;
+}
+</style>
 
-<form method="post" >
+<form method="post">
  
  {{with .ldap}}
 <fieldset class="EditField" style="float:left;width:60%; height:280px"> 
@@ -31,7 +38,6 @@
 	<br>
 	<label class="control-label" for="TimeOut">超时时长(秒): </label>
 	<input type="text" name="TimeOut"  placeholder="请输入超时时长" value="{{.TimeOut}}"  /> 
-
  </fieldset>
  <fieldset class="EditField" style="float:right;width:40%;height:280px"> 
             <legend>属性</legend>  

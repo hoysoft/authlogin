@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/config"
+	"github.com/astaxie/beego/session"
 	"io"
 	"os"
 	"path"
@@ -12,14 +13,15 @@ import (
 	//"time"
 )
 
-var (
-	//globalSessions *session.Manager
+type ActionMethodBefoerFunc func(c *beego.Controller, method string, action string) (abort bool)
 
-	//loginHtmlString        string
-	//mLayout, LoginT        *template.Template
-	//actionMethodBefoerFunc ActionMethodBefoerFunc
-	//AuthViewPath           string //
+var (
+	globalSessions *session.Manager
+
+	actionMethodBefoerFunc ActionMethodBefoerFunc
+
 	cnf config.ConfigContainer
+	ops options
 )
 
 func init() {
@@ -29,6 +31,15 @@ func init() {
 
 	//读取authlogin配置
 	cnf, _ = config.NewConfig("ini", "conf/authlogin.conf")
+	ops = options{}
+	ops.Read()
+
+	globalSessions, _ = session.NewManager("memory", `{"cookieName":"gosessionid", "enableSetCookie,omitempty": true, "gclifetime":3600, "maxLifetime": 3600, "secure": false, "sessionIDHashFunc": "sha1", "sessionIDHashKey": "booksmanage", "cookieLifeTime": 3600, "providerConfig": ""}`)
+	go globalSessions.GC()
+}
+
+func ActionMethodBefoer(methodFunc ActionMethodBefoerFunc) {
+	actionMethodBefoerFunc = methodFunc
 }
 
 func cpFile(spathName, dpath string) {

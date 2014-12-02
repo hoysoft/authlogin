@@ -79,6 +79,13 @@ func GetLdapConnectorById(id int) (v *LdapConnector, err error) {
 	return nil, err
 }
 
+func GetAllLdapConnector_sm() *[]LdapConnector {
+	var l []LdapConnector
+	o := orm.NewOrm()
+	o.QueryTable(new(LdapConnector)).All(&l)
+	return &l
+}
+
 // @Param	query	query	string	false	"Filter. e.g. col1:v1,col2:v2 ..."
 // @Param	fields	query	string	false	"Fields returned. e.g. col1,col2 ..."
 // @Param	sortby	query	string	false	"Sorted-by fields. e.g. col1,col2 ..."
