@@ -79,7 +79,7 @@ func readFile(pathfilename string) string {
 //	return nil
 //}
 
-func runActionMethodBefoer(c *beego.Controller, method string, action string) bool {
+func runActionMethodBefoer(c *BaseController, method string, action string) bool {
 	if actionMethodBefoerFunc != nil {
 		return actionMethodBefoerFunc(c, method, action)
 	}
@@ -146,7 +146,7 @@ func (this *UserController) Get() {
 		this.Data["userstates"] = userstates
 		this.Data["Title"] = cnf.String("user_all::title")
 		this.TplNames = "authlogin/user_all.html"
-		if runActionMethodBefoer(&this.Controller, "Get", action) {
+		if runActionMethodBefoer(&this.BaseController, "Get", action) {
 			return
 		}
 		//s := readFile("test.txt")
@@ -201,13 +201,13 @@ func (this *UserController) Get() {
 		this.Data["eUser"] = &eUser
 		this.Data["Title"] = cnf.String("user_edit::title")
 		this.TplNames = "authlogin/user_edit.html"
-		if runActionMethodBefoer(&this.Controller, "Get", action) {
+		if runActionMethodBefoer(&this.BaseController, "Get", action) {
 			return
 		}
 	case "import": //导入用户列表
 		this.Data["Title"] = cnf.String("user_import::title")
 		this.TplNames = "authlogin/user_import.html"
-		if runActionMethodBefoer(&this.Controller, "Get", action) {
+		if runActionMethodBefoer(&this.BaseController, "Get", action) {
 			return
 		}
 	case "login": // 用户登录
@@ -216,14 +216,14 @@ func (this *UserController) Get() {
 		this.Data["Title"] = cnf.String("login::title")
 
 		this.TplNames = "authlogin/login.html"
-		if runActionMethodBefoer(&this.Controller, "Get", action) {
+		if runActionMethodBefoer(&this.BaseController, "Get", action) {
 			return
 		}
 
 	case "add": //注册用户
 		this.TplNames = "authlogin/user_add.html"
 		this.Data["Title"] = cnf.String("user_add::title")
-		if runActionMethodBefoer(&this.Controller, "Get", action) {
+		if runActionMethodBefoer(&this.BaseController, "Get", action) {
 			return
 		}
 	case "delete": // 删除用户
@@ -240,7 +240,7 @@ func (this *UserController) Get() {
 	case "logout": // 用户退出
 		sess.Delete("Uid")
 		this.TplNames = "authlogin/logout.html"
-		if runActionMethodBefoer(&this.Controller, "Get", action) {
+		if runActionMethodBefoer(&this.BaseController, "Get", action) {
 			return
 		}
 	}
@@ -320,7 +320,7 @@ func (this *UserController) Post() {
 		this.TplNames = "authlogin/user_edit.html"
 		this.Data["eUser"] = &user
 		this.Data["Title"] = cnf.String("user_edit::title")
-		if runActionMethodBefoer(&this.Controller, "Post", action) {
+		if runActionMethodBefoer(&this.BaseController, "Post", action) {
 			return
 		}
 		// 检测E-mail或密码是否为空

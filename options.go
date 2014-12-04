@@ -50,7 +50,7 @@ func (this *AdminController) Get() {
 	this.Data["nameFromarts"] = nameFromarts
 	this.Data["Title"] = cnf.String("options::title")
 	this.TplNames = "authlogin/options.html"
-	if runActionMethodBefoer(&this.Controller, "Get", action) {
+	if runActionMethodBefoer(&this.BaseController, "Get", action) {
 		return
 	}
 

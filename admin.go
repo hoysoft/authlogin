@@ -21,7 +21,7 @@ type LoginUser struct {
 	DisplayName string //显示名称
 }
 
-type ActionMethodBefoerFunc func(c *beego.Controller, method string, action string) (abort bool)
+type ActionMethodBefoerFunc func(c *BaseController, method string, action string) (abort bool)
 
 var (
 	globalSessions *session.Manager
@@ -34,18 +34,18 @@ var (
 
 type BaseController struct {
 	beego.Controller
-	user *LoginUser
+	LoginUser *LoginUser
 }
 
 func (this *BaseController) Prepare() {
 	beego.ReadFromRequest(&this.Controller)
-	this.user = CheckLogin(&this.Controller)
-	if this.user == nil {
+	this.LoginUser = CheckLogin(&this.Controller)
+	if this.LoginUser == nil {
 		if this.Ctx.Request.RequestURI != "/user/login" {
 			this.Redirect("/user/login", 302)
 		}
 	}
-	this.Data["User"] = &this.user
+	this.Data["LoginUser"] = &this.LoginUser
 }
 
 func init() {

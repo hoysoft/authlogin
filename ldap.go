@@ -63,7 +63,7 @@ func (this *LdapController) Get() {
 
 		this.Data["Title"] = cnf.String("ldap_all::title")
 		this.TplNames = "authlogin/ldap_all.html"
-		if runActionMethodBefoer(&this.Controller, "Get", action) {
+		if runActionMethodBefoer(&this.BaseController, "Get", action) {
 			return
 		}
 		//s := readFile("test.txt")
@@ -75,7 +75,7 @@ func (this *LdapController) Get() {
 		this.Data["Title"] = cnf.String("ldap_add::title")
 		this.TplNames = "authlogin/ldap_edit.html"
 
-		if runActionMethodBefoer(&this.Controller, "Get", action) {
+		if runActionMethodBefoer(&this.BaseController, "Get", action) {
 			return
 		}
 
@@ -96,7 +96,7 @@ func (this *LdapController) Get() {
 		this.Data["Title"] = cnf.String("ldap_edit::title")
 		this.TplNames = "authlogin/ldap_edit.html"
 
-		if runActionMethodBefoer(&this.Controller, "Get", action) {
+		if runActionMethodBefoer(&this.BaseController, "Get", action) {
 			return
 		}
 
