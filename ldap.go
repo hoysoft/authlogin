@@ -3,11 +3,13 @@ package authlogin
 import (
 	"fmt"
 	//	"github.com/mavricknz/ldap"
+	"github.com/hoysoft/authlogin/models"
 	//"reflect"
 	//	"encoding/json"
 	"errors"
-	"github.com/astaxie/beego"
 	"strconv"
+
+	"github.com/astaxie/beego"
 )
 
 //type UserAuth struct {
@@ -21,7 +23,7 @@ import (
 //}
 
 type LdapController struct {
-	beego.Controller
+	BaseController
 }
 
 func init() {
@@ -53,7 +55,7 @@ func (this *LdapController) Get() {
 		var offset int64 = (int64(pageNo) - 1) * limit
 		//var query map[string]string = map[string]string{"source": "0"}
 		var query map[string]string = map[string]string{}
-		ldaps, count, _ := GetAllLdapConnector(query, fields, sortby, order, offset, limit)
+		ldaps, count, _ := models.GetAllLdapConnector(query, fields, sortby, order, offset, limit)
 		//ldaps, count, _ := Table_GetAll(&LDAPConnector{}, query, fields, sortby, order, offset, limit)
 		this.Data["Ldaps"] = &ldaps
 		//count, _ := GetUserCount()
@@ -68,7 +70,7 @@ func (this *LdapController) Get() {
 		//this.Ctx.WriteString(s)
 		return
 	case "add": //LDAP新增
-		ld := LdapConnector{}
+		ld := models.LdapConnector{}
 		this.Data["ldap"] = ld
 		this.Data["Title"] = cnf.String("ldap_add::title")
 		this.TplNames = "authlogin/ldap_edit.html"
@@ -85,7 +87,7 @@ func (this *LdapController) Get() {
 			return
 		}
 
-		ld, err := GetLdapConnectorById(id)
+		ld, err := models.GetLdapConnectorById(id)
 		if err != nil {
 			return
 		}
@@ -102,7 +104,7 @@ func (this *LdapController) Get() {
 	}
 }
 
-func post_LdapConnector(this *LdapController, ld *LdapConnector) (err error) {
+func post_LdapConnector(this *LdapController, ld *models.LdapConnector) (err error) {
 	if err = this.ParseForm(ld); err != nil {
 		this.Data["Message"] = err
 		return
@@ -120,13 +122,13 @@ func (this *LdapController) Post() {
 	action := this.Ctx.Input.Param(":action")
 	switch action {
 	case "add": //LDAP新增
-		ld := LdapConnector{}
+		ld := models.LdapConnector{}
 		err := post_LdapConnector(this, &ld)
 		if err != nil {
 			this.Render()
 			return
 		}
-		AddLdapConnector(&ld)
+		models.AddLdapConnector(&ld)
 
 		this.Redirect("/ldap", 302)
 
@@ -140,7 +142,7 @@ func (this *LdapController) Post() {
 			return
 		}
 
-		ld, err := GetLdapConnectorById(id)
+		ld, err := models.GetLdapConnectorById(id)
 		if err != nil {
 			return
 		}
@@ -149,7 +151,7 @@ func (this *LdapController) Post() {
 			this.Get()
 			return
 		}
-		err = UpdateLdapConnectorById(ld)
+		err = models.UpdateLdapConnectorById(ld)
 		if err != nil {
 			fmt.Println("err:", err)
 		}

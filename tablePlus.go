@@ -6,6 +6,7 @@ import (
 	"reflect"
 	//	"strconv"
 	"errors"
+	"github.com/hoysoft/authlogin/models"
 	"strings"
 )
 
@@ -68,7 +69,7 @@ func Table_GetAll(table interface{}, query map[string]string, fields []string, s
 		}
 	}
 
-	var l []User
+	var l []models.User
 
 	qs = qs.OrderBy(sortFields...)
 	if _, err := qs.Limit(limit, offset).All(&l, fields...); err == nil {

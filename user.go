@@ -3,8 +3,10 @@ package authlogin
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/astaxie/beego"
 
+	"github.com/astaxie/beego"
+	"github.com/coscms/xweb/validation"
+	"github.com/hoysoft/authlogin/models"
 	//"github.com/coscms/forms"
 	//	"html/template"
 	"strings"
@@ -32,7 +34,7 @@ var (
 )
 
 type UserController struct {
-	beego.Controller
+	BaseController
 }
 
 func init() {
@@ -60,22 +62,22 @@ func readFile(pathfilename string) string {
 }
 
 // 检测用户是否登录
-func LoginUser(this *beego.Controller, autoRedirect bool) *User {
-	sess, _ := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
-	defer sess.SessionRelease(this.Ctx.ResponseWriter)
-	userid := sess.Get("Uid")
-	if userid != nil {
-		user, e := GetUserById(userid.(int))
-		if e == nil {
-			return user //用户已经登录，返回用户信息
-		}
-	}
+//func LoginUser(this *beego.Controller, autoRedirect bool) *models.User {
+//	sess, _ := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
+//	defer sess.SessionRelease(this.Ctx.ResponseWriter)
+//	userid := sess.Get("Uid")
+//	if userid != nil {
+//		user, e := models.GetUserById(userid.(int))
+//		if e == nil {
+//			return user //用户已经登录，返回用户信息
+//		}
+//	}
 
-	if this.Ctx.Request.RequestURI != "/user/login" && autoRedirect { // 用户未登录，自动跳转
-		this.Ctx.Redirect(302, "/user/login") // 跳转到用户登录页面
-	}
-	return nil
-}
+//	if this.Ctx.Request.RequestURI != "/user/login" && autoRedirect { // 用户未登录，自动跳转
+//		this.Ctx.Redirect(302, "/user/login") // 跳转到用户登录页面
+//	}
+//	return nil
+//}
 
 func runActionMethodBefoer(c *beego.Controller, method string, action string) bool {
 	if actionMethodBefoerFunc != nil {
@@ -123,7 +125,7 @@ func (this *UserController) Get() {
 		var offset int64 = (int64(pageNo) - 1) * limit
 		//var query map[string]string = map[string]string{"source": "0"}
 		var query map[string]string = map[string]string{}
-		users, count, _ := GetAllUser(query, fields, sortby, order, offset, limit)
+		users, count, _ := models.GetAllUser(query, fields, sortby, order, offset, limit)
 		//fmt.Println("user:", users)
 		this.Data["Users"] = &users
 		//count, _ := GetUserCount()
@@ -151,7 +153,7 @@ func (this *UserController) Get() {
 		//this.Ctx.WriteString(s)
 		return
 	case "export": //导出用户列表
-		users := GetAllUse_sm()
+		users := models.GetAllUse_sm()
 		lang, err := json.Marshal(users)
 		if err == nil {
 			userAgent := strings.ToLower(this.Ctx.Request.UserAgent())
@@ -192,7 +194,7 @@ func (this *UserController) Get() {
 
 		}
 
-		eUser, err := GetUserById(uid)
+		eUser, err := models.GetUserById(uid)
 		if err != nil {
 
 		}
@@ -231,7 +233,7 @@ func (this *UserController) Get() {
 
 		}
 
-		DeleteUser(uid)
+		models.DeleteUser(uid)
 
 		this.Ctx.WriteString("<script> history.back(1); </script>")
 	case "reset-pwd": //密码复位
@@ -246,11 +248,12 @@ func (this *UserController) Get() {
 }
 
 func (this *UserController) Post() {
+	valid := validation.Validation{}
 	//	this.Layout = "layout_admin.tpl"           // 模板布局文件
 	action := this.Ctx.Input.Param(":action") // 用户的添加或修改
 	switch action {
 	case "add": // 添加用户
-		user := User{}
+		user := models.User{}
 		user.Email = this.Input().Get("email")        // 用户E-mail
 		user.Account = this.Input().Get("name")       // 用户名
 		password := this.Input().Get("password")      // 密码
@@ -270,6 +273,20 @@ func (this *UserController) Post() {
 			return
 		}
 
+		b, err := valid.Valid(&user)
+		if err != nil {
+			this.Data["Message"] = "数据验证失败"
+			return
+		}
+		if !b {
+			// validation does not pass
+			// blabla...
+			this.Data["Message"] = "数据验证未通过"
+			for _, err := range valid.Errors {
+				fmt.Println(err.Key, err.Message)
+			}
+			return
+		}
 		// 检查E-mail或用户名是否已存在
 		//orm = InitDb()
 		//user := User{}
@@ -284,7 +301,7 @@ func (this *UserController) Post() {
 		//}
 
 		//保存用户
-		AddUser(&user)
+		models.AddUser(&user)
 
 		this.Ctx.Redirect(302, "/user/") // 返回用户列表页面
 	case "edit": // 修改用户
@@ -293,7 +310,7 @@ func (this *UserController) Post() {
 		if err != nil {
 
 		}
-		user := User{}
+		user := models.User{}
 		user.Id = uid
 		user.Email = this.Input().Get("email")        // 用户E-mail
 		user.Account = this.Input().Get("name")       // 用户名
@@ -322,12 +339,12 @@ func (this *UserController) Post() {
 
 		// 更新用户信息
 		if password != "" {
-			user.Password = Sha1(password)
+			user.Password = models.Sha1(password)
 		}
 		user.Updatedtime = time.Now()
 
 		// 保存用户信息
-		UpdateUserById(&user)
+		models.UpdateUserById(&user)
 
 		this.Ctx.Redirect(302, "/user/") // 返回用户列表页面
 	case "import": //导入用户列表
@@ -337,14 +354,14 @@ func (this *UserController) Post() {
 		}
 		fd, err := ioutil.ReadAll(f)
 		//fmt.Println(fd)
-		u := []User{}
+		u := []models.User{}
 		//var u []User
 		//	json.Unmarshal(fd, &u)
 		if err := json.Unmarshal(fd, &u); err == nil {
 			//处理导入用户列表
 			addCount := 0
 			for _, r := range u {
-				_, err = AddUser(&r)
+				_, err = models.AddUser(&r)
 				if err != nil {
 					fmt.Println(err)
 				} else {
@@ -359,16 +376,17 @@ func (this *UserController) Post() {
 	//	this.SaveToFile("user_file", "./static/files/"+"uploaded_file.txt")
 
 	case "login": // 用户登录
-		name := this.Ctx.Request.FormValue("username")     // 用户名
+
+		account := this.Ctx.Request.FormValue("account")   // 用户名
 		password := this.Ctx.Request.FormValue("password") // 用户密码
 		this.Data["Title"] = cnf.String("login::title")
 		// 检测用户名或密码是否为空
-		if name == "" || password == "" {
+		if account == "" || password == "" {
 			this.Data["Message"] = "用户名或密码为空"
 			this.Ctx.Redirect(302, "/user/login")
 			return
 		}
-		user, b := AuthUser(name, password)
+		user, b := models.AuthUser(account, password)
 		if !b || user == nil {
 			this.Data["Message"] = "用户名或密码错误！"
 			this.Ctx.Redirect(302, "/user/login")

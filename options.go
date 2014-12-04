@@ -2,8 +2,10 @@ package authlogin
 
 import (
 	"fmt"
-	"github.com/astaxie/beego"
 	"strconv"
+
+	"github.com/astaxie/beego"
+	"github.com/hoysoft/authlogin/models"
 )
 
 type options struct {
@@ -12,7 +14,7 @@ type options struct {
 }
 
 type AdminController struct {
-	beego.Controller
+	BaseController
 }
 
 func init() {
@@ -30,9 +32,9 @@ func (this *AdminController) Get() {
 	action := this.Ctx.Input.Param(":action")
 	this.Data["Ops"] = ops
 	authModes := []*selects{
-		&selects{"0", ops.authMode == "", "本地用户"},
+		&selects{"", ops.authMode == "", "本地用户"},
 	}
-	ldaps := GetAllLdapConnector_sm()
+	ldaps := models.GetAllLdapConnector_sm()
 	if ldaps != nil {
 		for _, ldap := range *ldaps {
 			authModes = append(authModes, &selects{ldap.Name, ops.authMode == ldap.Name, ldap.Name})
@@ -67,7 +69,6 @@ func (this *AdminController) Post() {
 }
 
 func (this *options) Read() {
-	fmt.Printf("bbbbbbbbbbbbbbbbbbbbbbbbbb")
 	ops.authMode = cnf.DefaultString("options::authMode", "")
 	ops.nameFromart = cnf.DefaultInt("options::nameFromart", 0)
 	fmt.Println(ops.authMode)

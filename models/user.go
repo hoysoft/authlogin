@@ -1,12 +1,13 @@
-package authlogin
+package models
 
 import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"github.com/astaxie/beego/orm"
 	"io"
 	"reflect"
+
+	"github.com/astaxie/beego/orm"
 	//"strconv"
 	"strings"
 	"time"
@@ -14,30 +15,36 @@ import (
 
 // 用户表
 type User struct {
-	Id            int    `orm:"auto;PK"`        // 用户ID
-	Email         string `orm:"size(32)`        // 用户Email
-	LastName      string `orm:"size(32)"`       //姓氏
-	FirstName     string `orm:"size(32)"`       //名字
-	Password      string `orm:"size(32)`        // 密码；加密形式
-	Account       string `orm:"size(32)`        //用户登录名
-	Remark        string `orm:"size(200);null"` //备注
-	Status        int
-	Createdtime   time.Time `orm:"auto_now_add;type(datetime)"`               // 用户创建时间
-	Updatedtime   time.Time `orm:"auto_now;type(datetime)"`                   // 用户最后修改时间
-	Lastlogintime time.Time `orm:"column(lastlogintime);type(datetime);null"` // 用户最后登录时间
+	Id            int            `orm:"auto;PK"`                              // 用户ID
+	Email         string         `orm:"size(32)" valid:"Email; MaxSize(100)"` // 用户Email
+	LastName      string         `orm:"size(32)"`                             //姓氏
+	FirstName     string         `orm:"size(32)"`                             //名字
+	Password      string         `orm:"size(32)`                              // 密码；加密形式
+	Account       string         `orm:"size(32)`                              //用户登录名
+	MobileNumber  string         `orm:"size(12);null" valid:"Mobile"`         //手机号
+	Remark        string         `orm:"size(100);null"`                       //备注
+	Question      string         `orm:"size(100);null"`                       //提示问题，找回密码用
+	Answer        string         `orm:"size(100);null"`                       //信息答案，找回密码用
+	Status        int            //状态 0-未激活 1-在线 2-禁言
+	IsOnline      bool           //是否在线
+	Ldap          *LdapConnector `orm:"rel(one)"`                                  //LDAP连接id
+	Createdtime   time.Time      `orm:"auto_now_add;type(datetime)"`               // 用户创建时间
+	Updatedtime   time.Time      `orm:"auto_now;type(datetime)"`                   // 用户最后修改时间
+	Lastlogintime time.Time      `orm:"column(lastlogintime);type(datetime);null"` // 用户最后登录时间
 }
 
 func init() {
 	orm.RegisterModel(new(User))
-
 }
 
 //空表时增加默认管理帐号
-func autoAddTable() {
+func AddUserDefaultData() {
 	count, _ := GetUserCount()
 
 	if count == 0 {
-		u := User{Id: 0, Account: "admin", Password: Sha1("admin")}
+		ldapcnn := AddLdapConnectorDefaultData()
+
+		u := User{Id: 0, Account: "admin", Password: Sha1("admin"), Ldap: ldapcnn}
 		_, er := AddUser(&u)
 		if er != nil {
 			fmt.Println("add user error:%s", er)
@@ -46,14 +53,14 @@ func autoAddTable() {
 }
 
 //验证用户
-func AuthUser(name string, password string) (*User, bool) {
+func AuthUser(account string, password string) (*User, bool) {
 	var user User
 	o := orm.NewOrm()
-	err := o.QueryTable("user").Filter("Username", name).Filter("password", Sha1(password)).One(&user)
+	err := o.QueryTable("user").Filter("Account", account).Filter("password", Sha1(password)).One(&user)
 
-	if err != nil || &user == nil {
-		//增加默认管理帐号
-		autoAddTable()
+	if err != nil && account == "admin" {
+		AddUserDefaultData()
+		o.QueryTable("user").Filter("Account", account).Filter("password", Sha1(password)).One(&user)
 	}
 	if &user != nil {
 		// 更新用户最后登录时间信息.
@@ -81,7 +88,6 @@ func AddUser(m *User) (id int64, err error) {
 	o := orm.NewOrm()
 	id, err = o.Insert(m)
 	return
-
 }
 
 //修改用户

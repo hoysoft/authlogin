@@ -1,9 +1,10 @@
-package authlogin
+package models
 
 import (
 	//"crypto/sha1"
 	"errors"
 	"fmt"
+
 	"github.com/astaxie/beego/orm"
 	//"io"
 	"reflect"
@@ -33,19 +34,33 @@ type LdapConnector struct {
 	Updatedtime        time.Time `orm:"auto_now;type(datetime)"`     // 最后修改时间
 }
 
-//LDAP导入用户列表
-type LdapUser struct {
-	Id            int    `orm:"auto;PK"`  // 用户ID
-	Account       string `orm:"size(32)"` //用户登录名
-	LastName      string `orm:"size(32)"` //姓氏
-	FirstName     string `orm:"size(32)"` //名字
-	Email         string `orm:"size(32)"` //Email
-	Status        int
-	LdapConnector *LdapConnector `orm:"rel(one)"` //LDAP连接id
+func init() {
+	orm.RegisterModel(new(LdapConnector))
 }
 
-func init() {
-	orm.RegisterModel(new(LdapConnector), new(LdapUser))
+//空表时增加默认LdapConnector(本地连接)
+func AddLdapConnectorDefaultData() *LdapConnector {
+	u := LdapConnector{Name: ""}
+	o := orm.NewOrm()
+	err := o.Read(&u, "Name")
+	if err != nil {
+		l := LdapConnector{Name: ""}
+		_, er := AddLdapConnector(&l)
+		if er != nil {
+			fmt.Println("add LdapConnector error:%s", er)
+			return nil
+		} else {
+			return &l
+		}
+	}
+	return &u
+}
+
+func GetLdapConnectorCount() (count int64, err error) {
+	o := orm.NewOrm()
+	count, err = o.QueryTable("ldapConnector").Count()
+	fmt.Println("count--", err)
+	return
 }
 
 //增加LdapConnector
