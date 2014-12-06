@@ -11,7 +11,7 @@ import (
 
 // oprations for Group
 type GroupController struct {
-	BaseController
+	AdminBaseController
 }
 
 func (this *GroupController) URLMapping() {

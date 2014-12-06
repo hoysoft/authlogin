@@ -34,7 +34,7 @@ var (
 )
 
 type UserController struct {
-	BaseController
+	AdminBaseController
 }
 
 func init() {
@@ -44,6 +44,9 @@ func init() {
 	beego.Router("/user/:action", &UserController{})
 	beego.Router("/user/:action/:id", &UserController{})
 
+	//Before_auth(beego.UrlFor("UserController.Get", ":action", "login")).UnLogin()
+
+	Before_auth("/user/login").UnLogin()
 }
 
 func readFile(pathfilename string) string {
@@ -78,13 +81,6 @@ func readFile(pathfilename string) string {
 //	}
 //	return nil
 //}
-
-func runActionMethodBefoer(c *BaseController, method string, action string) bool {
-	if actionMethodBefoerFunc != nil {
-		return actionMethodBefoerFunc(c, method, action)
-	}
-	return false
-}
 
 func (this *UserController) SetPaginator(per int, nums int64) *Paginator {
 	p := NewPaginator(this.Ctx.Request, per, nums)
@@ -146,7 +142,7 @@ func (this *UserController) Get() {
 		this.Data["userstates"] = userstates
 		this.Data["Title"] = cnf.String("user_all::title")
 		this.TplNames = "authlogin/user_all.html"
-		if runActionMethodBefoer(&this.BaseController, "Get", action) {
+		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
 		//s := readFile("test.txt")
@@ -201,29 +197,40 @@ func (this *UserController) Get() {
 		this.Data["eUser"] = &eUser
 		this.Data["Title"] = cnf.String("user_edit::title")
 		this.TplNames = "authlogin/user_edit.html"
-		if runActionMethodBefoer(&this.BaseController, "Get", action) {
+		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
 	case "import": //导入用户列表
 		this.Data["Title"] = cnf.String("user_import::title")
 		this.TplNames = "authlogin/user_import.html"
-		if runActionMethodBefoer(&this.BaseController, "Get", action) {
+		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
 	case "login": // 用户登录
+		if this.LoginUser != nil {
+			flash := beego.NewFlash()
+			flash.Notice("您已经登录，不需要再次登录")
+			flash.Store(&this.Controller)
+			this.Redirect("/", 302)
+		}
 		//_, err := cnf.GetSection("login")
-		//fmt.Println("seeeeeeeee:", err)
+
+		Http_referer := this.Ctx.Request.Header.Get("HTTP_REFERER")
+		fmt.Println("seeeeeeeee:", Http_referer)
+		if Http_referer != "" {
+			setSessions(&this.Controller, "http_referer", Http_referer)
+		}
 		this.Data["Title"] = cnf.String("login::title")
 
 		this.TplNames = "authlogin/login.html"
-		if runActionMethodBefoer(&this.BaseController, "Get", action) {
+		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
-
+		break
 	case "add": //注册用户
 		this.TplNames = "authlogin/user_add.html"
 		this.Data["Title"] = cnf.String("user_add::title")
-		if runActionMethodBefoer(&this.BaseController, "Get", action) {
+		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
 	case "delete": // 删除用户
@@ -240,7 +247,7 @@ func (this *UserController) Get() {
 	case "logout": // 用户退出
 		sess.Delete("Uid")
 		this.TplNames = "authlogin/logout.html"
-		if runActionMethodBefoer(&this.BaseController, "Get", action) {
+		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
 	}
@@ -320,7 +327,7 @@ func (this *UserController) Post() {
 		this.TplNames = "authlogin/user_edit.html"
 		this.Data["eUser"] = &user
 		this.Data["Title"] = cnf.String("user_edit::title")
-		if runActionMethodBefoer(&this.BaseController, "Post", action) {
+		if runActionMethodBefoer(&this.AdminBaseController, "Post", action) {
 			return
 		}
 		// 检测E-mail或密码是否为空
@@ -386,54 +393,23 @@ func (this *UserController) Post() {
 			this.Ctx.Redirect(302, "/user/login")
 			return
 		}
-		user, b := models.AuthUser(account, password)
-		if !b || user == nil {
+		user := AuthLogin(&this.AdminBaseController, account, password)
+		if user == nil {
 			this.Data["Message"] = "用户名或密码错误！"
 			this.Ctx.Redirect(302, "/user/login")
 			return
 		} else {
 			this.Data["Message"] = "登录成功！"
 			// 保存用户登录信息
-			sess, _ := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
-			defer sess.SessionRelease(this.Ctx.ResponseWriter)
-			sess.Set("Uid", user.Id)
-			this.Ctx.Redirect(302, "/v1/site")
+			setSessions(&this.Controller, "Uid", user.Id)
+
+			flash := beego.NewFlash()
+			flash.Success("成功登录到系统")
+			flash.Store(&this.Controller)
+			//跳转到前面操作页面
+			Redirect_HttpReferer(&this.Controller)
+
 		}
-		// 如果不存在任何用户，那么直接以admin身份登录
-		//orm = InitDb()
-		//users := []User{}
-		//err = orm.FindAll(&users)
-		//if err == nil && len(users) == 0 {
-		//	this.SetSession("Uid", "0")
-		//	this.Ctx.Redirect(302, "/admin/")
-		//}
-
-		//	errFlag := false // 判断登录是否出错
-
-		//	orm = InitDb()
-		//	user := User{}
-		//	err = orm.Where("name=? and password=?", name, Sha1(password)).Find(&user)
-		//	if err != nil {
-		//		this.Data["Message"] = "用户名或密码错误"
-		//		errFlag = true
-		//	} else { // 用户名、密码验证成功
-		//		// 保存用户登录信息
-		//		sess.Set("account", name)
-
-		//		this.Ctx.Redirect(302, "/admin/") // 跳转到管理后台首页
-		//	}
-
-		//	// 显示用户登录页面，再次登录
-		//	if errFlag {
-		//		this.Data["Name"] = name
-		//		this.Data["Password"] = password
-		//		this.Layout = "layout_one.tpl"
-		//		SiteName := beego.AppConfig.String("appname") // 网站名称
-		//		this.Data["SiteName"] = SiteName
-		//		this.Data["Categories"] = GetCategories() // 分类列表，用于导航栏
-		//		this.TplNames = "admin/login.tpl"
-		//		return
-		//	}
 
 	}
 

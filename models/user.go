@@ -38,42 +38,16 @@ func init() {
 }
 
 //空表时增加默认管理帐号
-func AddUserDefaultData() {
-	count, _ := GetUserCount()
+func AddUserDefaultData(m *User) {
+	ldapcnn := AddLdapConnectorDefaultData()
+	m.Password = Sha1(m.Password)
+	m.Ldap = ldapcnn
 
-	if count == 0 {
-		ldapcnn := AddLdapConnectorDefaultData()
-
-		u := User{Id: 0, Account: "admin", Password: Sha1("admin"), Ldap: ldapcnn}
-		_, er := AddUser(&u)
-		if er != nil {
-			fmt.Println("add user error:%s", er)
-		}
-	}
-}
-
-//验证用户
-func AuthUser(account string, password string) (*User, bool) {
-	var user User
-	o := orm.NewOrm()
-	err := o.QueryTable("user").Filter("Account", account).Filter("password", Sha1(password)).One(&user)
-
-	if err != nil && account == "admin" {
-		AddUserDefaultData()
-		o.QueryTable("user").Filter("Account", account).Filter("password", Sha1(password)).One(&user)
-	}
-	if &user != nil {
-		// 更新用户最后登录时间信息.
-		user.Lastlogintime = time.Now()
-		UpdateUserById(&user)
+	_, er := AddUser(m)
+	if er != nil {
+		fmt.Println("add user error:%s", er)
 	}
 
-	//for i := 0; i < 100; i++ {
-	//	u := User{Username: "admin" + strconv.Itoa(i), Password: Sha1("888888")}
-	//	AddUser(&u)
-	//}
-
-	return &user, err == nil
 }
 
 func GetUserCount() (count int64, err error) {
