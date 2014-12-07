@@ -19,8 +19,11 @@
 	<td>{{.Filter}}</td>
 	<td>{{.Ldaps}}</td>
 	     <td>{{.Createdtime.Format "2006-01-02 15:04:05" }}</td><td>{{.Updatedtime.Format "2006-01-02 15:04:05"}}</td>
-	<td><span class="action">
-	<a href="/ldap/edit/{{.Id}}">修改</a></span>&nbsp;<span class="action"><a href="/ldap/delete/{{.Id}}"  onclick="return confirm('确实要删除吗?')">删除</a></span></td></tr>
+	<td>
+	<span class="action"><a href="/ldap/test/{{.Id}}">测试</a></span>&nbsp;
+	<span class="action"><a href="/ldap/edit/{{.Id}}">修改</a></span>&nbsp;
+	<span class="action"><a href="/ldap/delete/{{.Id}}"  onclick="return confirm('确实要删除吗?')">删除</a></span>
+	</td></tr>
     {{end}}
 </tbody>
 </table>

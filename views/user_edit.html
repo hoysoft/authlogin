@@ -6,14 +6,14 @@
 <center>
 {{with .eUser}}
 <form method="post" class="edit-user form-horizontal">
- <label for="email">E-mail: </label>
- <input type="text" name="email" id="email" value="{{.Email}}" placeholder="(Enter your Email)"><br>
+ <label for="Email">E-mail: </label>
+ <input type="text" name="Email" id="Email" value="{{.Email}}" placeholder="(Enter your Email)"><br>
 
- <label for="account">用户名:</label>
- <input type="text" id="account" name="account" placeholder="请输入用户名" value="{{.Account}}" ><br>
+ <label for="Account">用户名:</label>
+ <input type="text" id="Account" name="Account" placeholder="请输入用户名" value="{{.Account}}" ><br>
  
- <label for="password">密码</label>
- <input type="password" id="password" name="password" value="" ><br>
+ <label for="Password">密码</label>
+ <input type="password" id="Password" name="Password" value="" ><br>
 
  <label for="re-password">请重复输入密码</label>
  <input type="password" id="re-password" name="re-password" value="" /><br><br><br>
@@ -21,7 +21,7 @@
     <div class="control-group">
         <div class="controls">
  
-		<input type='button' class="btn btn-primary" onClick="javascript:history.back(-1);" value='放弃'/> 
+		<input type='button' class="btn" onClick="javascript:history.back(-1);" value='放弃'/> 
             <button type="submit" class="btn btn-primary">保存修改</button>
         </div>
     </div>
