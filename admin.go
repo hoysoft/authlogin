@@ -14,8 +14,6 @@ import (
 	"github.com/astaxie/beego/orm"
 	"github.com/astaxie/beego/session"
 	"github.com/hoysoft/authlogin/models"
-
-	//"time"
 )
 
 type AuthFilter struct {
@@ -50,15 +48,12 @@ var (
 func Before_auth(url string) *AuthFilter {
 	a := AuthFilter{login: true, admin: false}
 	BeforeAuthFilter[url] = &a
-	fmt.Println("url:", url)
-	fmt.Println("AuthFilter:", a)
 	return &a
 }
 
 //不登录验证
 func (a *AuthFilter) UnLogin() *AuthFilter {
 	a.login = false
-	fmt.Println("AuthFilter:", a)
 	return a
 }
 
@@ -73,7 +68,10 @@ func (this *AdminBaseController) Prepare() {
 
 	var IsContinue bool
 	this.LoginUser, IsContinue = CheckLogin(&this.Controller)
-	this.Data["LoginUser"] = &this.LoginUser
+	fmt.Println("LoginUser:", this.LoginUser)
+	if this.LoginUser != nil {
+		this.Data["LoginUser"] = &this.LoginUser
+	}
 	if !IsContinue {
 		return
 	}
@@ -107,19 +105,6 @@ func (this *AdminBaseController) Prepare() {
 		return
 	}
 	beego.ReadFromRequest(&this.Controller)
-	//if this.LoginUser == nil && this.Ctx.Request.RequestURI != "/admin/new" {
-	//	if this.Ctx.Request.RequestURI != "/user/login" {
-	//		//setSessions(&this.Controller, "lastAdminPage", this.Ctx.Request.RequestURI)
-
-	//		//this.SetSession("lastAdminPage", this.Ctx.Request.RequestURI)
-	//		//fmt.Println("PPPPPPPPPP:", this.Ctx.Request.RequestURI)
-	//		this.Redirect("/user/login", 302)
-	//	}
-	//}
-	////非admin用户只能显示/修改自己用户信息
-	////if !this.LoginUser.IsAdmin {
-
-	////}
 
 }
 
@@ -156,7 +141,6 @@ func ActionMethodBefoer(methodFunc ActionMethodBefoerFunc) {
 }
 
 func CheckLogin(this *beego.Controller) (l *LoginUser, IsContinue bool) {
-	LUser := LoginUser{}
 
 	if user_count == 0 {
 		user_count, _ := models.GetUserCount()
@@ -167,10 +151,8 @@ func CheckLogin(this *beego.Controller) (l *LoginUser, IsContinue bool) {
 				this.Redirect("/admin/new", 302)
 				return nil, false
 			} else {
-
 				return nil, true
 			}
-
 		}
 	}
 
@@ -178,6 +160,7 @@ func CheckLogin(this *beego.Controller) (l *LoginUser, IsContinue bool) {
 
 	if userid != nil {
 		var e error
+		LUser := LoginUser{}
 		LUser.User, e = models.GetUserById(userid.(int))
 		fmt.Println("UUU:", LUser.User)
 		if LUser.User != nil && e == nil {
@@ -199,9 +182,6 @@ func CheckLogin(this *beego.Controller) (l *LoginUser, IsContinue bool) {
 		}
 	}
 
-	//if this.Ctx.Request.RequestURI != "/user/login" { // 用户未登录，自动跳转
-	//	this.Ctx.Redirect(302, "/user/login") // 跳转到用户登录页面
-	//}
 	return nil, true
 }
 

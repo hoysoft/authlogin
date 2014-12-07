@@ -17,6 +17,12 @@ type AdminController struct {
 	AdminBaseController
 }
 
+func (this *AdminController) Prepare() {
+	this.AdminBaseController.Prepare()
+	this.LayoutSections = make(map[string]string)
+	this.LayoutSections["Head"] = "authlogin/head.tpl"
+}
+
 func init() {
 	//增加路由
 	beego.Router("/admin", &AdminController{})

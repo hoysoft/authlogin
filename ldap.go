@@ -2,8 +2,11 @@ package authlogin
 
 import (
 	"fmt"
-	//	"github.com/mavricknz/ldap"
+
 	"github.com/hoysoft/authlogin/models"
+	//"github.com/stesla/ldap"
+	//"github.com/mavricknz/ldap"
+	"github.com/mmitton/ldap"
 	//"reflect"
 	//	"encoding/json"
 	"errors"
@@ -53,9 +56,10 @@ func (this *LdapController) Get() {
 		var order []string
 		var limit int64 = 6 //每页6行显示
 		var offset int64 = (int64(pageNo) - 1) * limit
-		//var query map[string]string = map[string]string{"source": "0"}
+		//var query map[string]string = map[string]string{"name__get": ""}
 		var query map[string]string = map[string]string{}
 		ldaps, count, _ := models.GetAllLdapConnector(query, fields, sortby, order, offset, limit)
+
 		//ldaps, count, _ := Table_GetAll(&LDAPConnector{}, query, fields, sortby, order, offset, limit)
 		this.Data["Ldaps"] = &ldaps
 		//count, _ := GetUserCount()
@@ -100,6 +104,24 @@ func (this *LdapController) Get() {
 			return
 		}
 
+		return
+	case "test": //LDAP连接测试
+		fmt.Println("0000000")
+		s := this.Ctx.Input.Param(":id")
+		id, err := strconv.Atoi(s)
+		if err != nil {
+			this.Render()
+			return
+		}
+		ld, err := models.GetLdapConnectorById(id)
+		if err != nil {
+			return
+		}
+		if err := LdapCheckSearch(ld); err == nil {
+			this.Ctx.WriteString("Ldap 连接成功")
+		} else {
+			this.Ctx.WriteString(fmt.Sprintf("Ldap 连接失败:%v", err))
+		}
 		return
 	}
 }
@@ -158,8 +180,79 @@ func (this *LdapController) Post() {
 		this.Redirect("/ldap", 302)
 
 		return
+
 	}
 }
+
+func LdapCheckConnect(ld *models.LdapConnector) error {
+	fmt.Printf("TestConnect: starting...\n")
+
+	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", ld.Host, ld.Port))
+	defer l.Close()
+	if err != nil {
+		return errors.New(fmt.Sprintf("LDAP connectiong error: %v", err))
+	}
+
+	fmt.Printf("TestConnect: finished...\n")
+	return nil
+}
+
+func LdapCheckSearch(ld *models.LdapConnector) error {
+	fmt.Printf("TestConnect: starting...\n")
+	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", ld.Host, ld.Port))
+	defer l.Close()
+	if err != nil {
+		return errors.New(fmt.Sprintf("LDAP connectiong error: %v", err))
+	}
+	fmt.Printf("TestConnect: finished...\n")
+	fmt.Printf("TestBind: starting...\n")
+	err = l.Bind(ld.MangerAccount, ld.Password)
+	if err != nil {
+		return errors.New(fmt.Sprintf("LDAP TestBind error: %v", err))
+	}
+	fmt.Printf("TestBind: finished...\n")
+	fmt.Printf("TestSearch: starting...\n")
+	var filter []string = []string{"(cn=users)"}
+	//var filter []string = []string{
+	//	"(cn=cis-fac)",
+	//	"(&(objectclass=rfc822mailgroup)(cn=*Computer*))",
+	//	"(&(objectclass=rfc822mailgroup)(cn=*Mathematics*))"}
+	var attributes []string = []string{
+		"cn",
+		"gecos"}
+	search_request := ldap.NewSearchRequest(
+		ld.BaseDN,
+		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
+		filter[0],
+		attributes,
+		nil)
+
+	sr, err := l.Search(search_request)
+	if err != nil {
+		return errors.New(fmt.Sprintf("LDAP Searchiong error: %v", err))
+	}
+
+	fmt.Printf("TestSearch: %s -> num of entries = %d\n", search_request.Filter, len(sr.Entries))
+	return nil
+}
+
+//func LdapConnectorCheck(ld *models.LdapConnector) error {
+//	fmt.Println("Connecting")
+//	l := ldap.NewLDAPConnection(ld.Host, uint16(ld.Port))
+//	err := l.Connect()
+//	defer l.Close()
+//	if err != nil {
+//		return errors.New(fmt.Sprintf("LDAP connectiong error: %v", err))
+//	}
+//	//authentification (Bind)
+//	loginname := ld.MangerAccount + "@" + "hz.com"
+//	fmt.Println("loginname:", loginname)
+//	err = l.Bind(loginname, ld.Password)
+//	if err != nil {
+//		return errors.New(fmt.Sprintf("LDAP Binding error: %v", err))
+//	}
+//	return nil
+//}
 
 //login check, input account, domain, passwd, server, port and base_dn for search
 //func saAuthCheck(
