@@ -9,27 +9,27 @@ import (
 	//"io"
 	"reflect"
 	//"strconv"
-	"strings"
+
 	"time"
 )
 
 //LDAP认证模式
 // LDAP连接管理表
 type LdapConnector struct {
-	Id                 int       `orm:"auto;PK"`     // 连接ID
-	Name               string    `orm:"size(32)"`    // 名称
-	Host               string    `orm:"size(32)"`    // 主机
-	Port               int       `orm:"size(12);389` // 端口
+	Id                 int       `orm:"auto;PK"`                            // 连接ID
+	Name               string    `orm:"default(null),size(32);null;unique"` // 名称
+	Host               string    `orm:"size(32)"`                           // 主机
+	Port               int       `orm:"size(12);389`                        // 端口
 	Ldaps              bool      //ldaps 协议
 	MangerAccount      string    `orm:"size(32)"`       //管理账号
 	Password           string    `orm:"size(200);null"` //密码；加密形式
 	BaseDN             string    `orm:"size(52)"`
 	Filter             string    `orm:"size(80);null"`               //LDAP过滤器
-	TimeOut            int       `orm:"size(12);0"`                  //超时（秒）
-	PropUser_Account   string    `orm:"size(32)"`                    //用户登录名属性
-	PropUser_FirstName string    `orm:"size(32)"`                    //名字属性
-	PropUser_LastName  string    `orm:"size(32)"`                    //姓氏属性
-	PropUser_Email     string    `orm:"size(32)"`                    //Email属性
+	TimeOut            int       `orm:"size(12);default(0)"`         //超时（秒）
+	PropUser_Account   string    `orm:"size(32);null"`               //用户登录名属性
+	PropUser_FirstName string    `orm:"size(32);null"`               //名字属性
+	PropUser_LastName  string    `orm:"size(32);null"`               //姓氏属性
+	PropUser_Email     string    `orm:"size(32);null"`               //Email属性
 	Createdtime        time.Time `orm:"auto_now_add;type(datetime)"` // 创建时间
 	Updatedtime        time.Time `orm:"auto_now;type(datetime)"`     // 最后修改时间
 }
@@ -101,20 +101,27 @@ func GetAllLdapConnector_sm() *[]LdapConnector {
 	return &l
 }
 
+// @Param   exclude query   string  false   "Exclude. e.g. col1:v1,col2:v2 ..."
 // @Param	query	query	string	false	"Filter. e.g. col1:v1,col2:v2 ..."
 // @Param	fields	query	string	false	"Fields returned. e.g. col1,col2 ..."
 // @Param	sortby	query	string	false	"Sorted-by fields. e.g. col1,col2 ..."
 // @Param	order	query	string	false	"Order corresponding to each sortby field, if single value, apply to all sortby fields. e.g. desc,asc ..."
 // @Param	limit	query	string	false	"Limit the size of result set. Must be an integer"
 // @Param	offset	query	string	false	"Start position of result set. Must be an integer"
-func GetAllLdapConnector(query map[string]string, fields []string, sortby []string, order []string,
+func GetAllLdapConnector(exclude map[string]interface{}, query map[string]interface{}, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, count int64, err error) {
 	o := orm.NewOrm()
 	qs := o.QueryTable(new(LdapConnector))
+	// exclude k=v
+	for k, v := range exclude {
+		// rewrite dot-notation to Object__Attribute
+		//k = strings.Replace(k, ".", "__", -1)
+		qs = qs.Exclude(k, v)
+	}
 	// query k=v
 	for k, v := range query {
 		// rewrite dot-notation to Object__Attribute
-		k = strings.Replace(k, ".", "__", -1)
+		//k = strings.Replace(k, ".", "__", -1)
 		qs = qs.Filter(k, v)
 	}
 	//记录数

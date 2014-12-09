@@ -56,9 +56,10 @@ func (this *LdapController) Get() {
 		var order []string
 		var limit int64 = 6 //每页6行显示
 		var offset int64 = (int64(pageNo) - 1) * limit
-		//var query map[string]string = map[string]string{"name__get": ""}
-		var query map[string]string = map[string]string{}
-		ldaps, count, _ := models.GetAllLdapConnector(query, fields, sortby, order, offset, limit)
+		var exclude map[string]interface{} = map[string]interface{}{"name": ""}
+		//	var query map[string]interface{} = map[string]interface{}{"name__isnull": false}
+		var query map[string]interface{} = map[string]interface{}{}
+		ldaps, count, _ := models.GetAllLdapConnector(exclude, query, fields, sortby, order, offset, limit)
 
 		//ldaps, count, _ := Table_GetAll(&LDAPConnector{}, query, fields, sortby, order, offset, limit)
 		this.Data["Ldaps"] = &ldaps

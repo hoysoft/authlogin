@@ -15,16 +15,16 @@ import (
 
 // 用户表
 type User struct {
-	Id            int            `orm:"auto;PK"`                              // 用户ID
-	Email         string         `orm:"size(32)" valid:"Email; MaxSize(100)"` // 用户Email
-	LastName      string         `orm:"size(32)"`                             //姓氏
-	FirstName     string         `orm:"size(32)"`                             //名字
-	Password      string         `orm:"size(32)`                              // 密码；加密形式
-	Account       string         `orm:"size(32)`                              //用户登录名
-	MobileNumber  string         `orm:"size(12);null" valid:"Mobile"`         //手机号
-	Remark        string         `orm:"size(100);null"`                       //备注
-	Question      string         `orm:"size(100);null"`                       //提示问题，找回密码用
-	Answer        string         `orm:"size(100);null"`                       //信息答案，找回密码用
+	Id            int            `orm:"auto;PK"`                                     // 用户ID
+	Email         string         `orm:"size(32);unique" valid:"Email; MaxSize(100)"` // 用户Email
+	LastName      string         `orm:"size(32)"`                                    //姓氏
+	FirstName     string         `orm:"size(32)"`                                    //名字
+	Password      string         `orm:"size(32)`                                     // 密码；加密形式
+	Account       string         `orm:"size(32)`                                     //用户登录名
+	MobileNumber  string         `orm:"size(12);null" valid:"Mobile"`                //手机号
+	Remark        string         `orm:"size(100);null"`                              //备注
+	Question      string         `orm:"size(100);null"`                              //提示问题，找回密码用
+	Answer        string         `orm:"size(100);null"`                              //信息答案，找回密码用
 	Status        int            //状态 0-未激活 1-在线 2-禁言
 	IsOnline      bool           //是否在线
 	Ldap          *LdapConnector `orm:"rel(one)"`                                  //LDAP连接id
