@@ -28,7 +28,7 @@ import (
 )
 
 type HwController struct {
-	AdminBaseController
+	AdminController
 }
 
 func init() {

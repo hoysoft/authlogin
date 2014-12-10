@@ -1,34 +1,28 @@
 <h1>{{.Title}}</h1>
  <hr style="padding-top:-10px;">
+<center>
 <input type="hidden" name="location" value="add-user" />
 <form method="post"  class="add-user form-horizontal">
-    <div class="control-group">
+ 
         <label class="control-label" for="email">E-mail</label>
-        <div class="controls">
-            <input type="email" id="email" name="email" placeholder="请输入E-mail地址" value="{{.Email}}" />
-        </div>
-    </div>
-    <div class="control-group">
+       <input type="email" id="email" name="email" placeholder="请输入E-mail地址" value="{{.Email}}" />
+	  <br>
         <label class="control-label" for="account">用户名</label>
-        <div class="controls">
             <input type="text" id="account" name="account" placeholder="请输入用户名" value="{{.Account}}" />
-        </div>
-    </div>
-    <div class="control-group">
+			<br>
         <label class="control-label" for="password">密码</label>
-        <div class="controls">
             <input type="password" id="password" name="password" value="{{.Password}}" />
-        </div>
-    </div>
-    <div class="control-group">
+		  <br>
         <label class="control-label" for="re-password">请重复输入密码</label>
-        <div class="controls">
             <input type="password" id="re-password" name="re-password" />
-        </div>
-    </div>
+ <br> <br> <br>
     <div class="control-group">
         <div class="controls">
-            <button type="submit" class="btn btn-primary">添加用户</button>
+		 
+	          <input type="button"  class="btn" value="返回" onclick="javascript:history.back()" />
+              <button type="submit" class="btn btn-primary">提交</button>
+           
+ 
         </div>
     </div>
 </form><!-- End .add-user -->

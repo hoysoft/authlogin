@@ -11,7 +11,7 @@ import (
 
 // oprations for UserRoles
 type UserRolesController struct {
-	AdminBaseController
+	AdminController
 }
 
 func (this *UserRolesController) URLMapping() {

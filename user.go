@@ -8,7 +8,7 @@ import (
 	"github.com/coscms/xweb/validation"
 	"github.com/hoysoft/authlogin/models"
 	//"github.com/coscms/forms"
-	//	"html/template"
+
 	"strings"
 	"time"
 	//"log"
@@ -34,7 +34,7 @@ var (
 )
 
 type UserController struct {
-	AdminBaseController
+	AdminController
 }
 
 func init() {
@@ -216,20 +216,31 @@ func (this *UserController) Get() {
 		//_, err := cnf.GetSection("login")
 
 		Http_referer := this.Ctx.Request.Header.Get("HTTP_REFERER")
-		fmt.Println("seeeeeeeee:", Http_referer)
+
 		if Http_referer != "" {
 			setSessions(&this.Controller, "http_referer", Http_referer)
 		}
 		this.Data["Title"] = cnf.String("login::title")
 
 		this.TplNames = "authlogin/login.html"
+		//this.RenderHtml("authlogin/login.html")
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
+		//rs, _ := this.RenderString()
+		//mContent,_:=template.ParseFiles("authlogin/login.html")
+		//this.AdminController.mTemplate.
+
+		//mt, _ := this.AdminController.mTemplate.ParseFiles("authlogin/login.html")
+		//rs, _ := this.RenderString()
+		//var buf bytes.Buffer
+		//mt.Parse(rs).ExecuteTemplate(&buf, "LayoutContent", this.Data)
+		//this.RenderBytes(&buf)
 		break
 	case "add": //注册用户
-		this.TplNames = "authlogin/user_add.html"
+
 		this.Data["Title"] = cnf.String("user_add::title")
+		this.TplNames = "authlogin/user_add.html"
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
@@ -265,9 +276,10 @@ func (this *UserController) Post() {
 		user.Account = this.Input().Get("name")       // 用户名
 		password := this.Input().Get("password")      // 密码
 		rePassword := this.Input().Get("re-password") // 重复输入的密码
-		this.TplNames = "authlogin/user_add.html"
+
 		this.Data["eUser"] = &user
 		this.Data["Title"] = cnf.String("user_add::title")
+		this.TplNames = "authlogin/user_add.html"
 		// 检测E-mail或密码是否为空
 		if user.Email == "" || user.Account == "" {
 			this.Data["Message"] = "E-mail或用户名为空"

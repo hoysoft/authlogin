@@ -164,7 +164,7 @@ func CheckLogin(this *beego.Controller) (l *LoginUser, IsContinue bool) {
 		LUser.User, e = models.GetUserById(userid.(int))
 		fmt.Println("UUU:", LUser.User)
 		if LUser.User != nil && e == nil {
-			switch cnf.DefaultInt("options:nameFromart", 0) {
+			switch cnf.DefaultInt("options:namefromart", 0) {
 			case 0: //"姓+名"
 				LUser.DisplayName = LUser.User.LastName + LUser.User.FirstName
 			case 1: // "名+姓"

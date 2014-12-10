@@ -11,7 +11,7 @@ import (
 
 // oprations for Node
 type NodeController struct {
-	AdminBaseController
+	AdminController
 }
 
 func (this *NodeController) URLMapping() {

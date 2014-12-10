@@ -26,7 +26,7 @@ import (
 //}
 
 type LdapController struct {
-	AdminBaseController
+	AdminController
 }
 
 func init() {

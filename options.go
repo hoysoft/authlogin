@@ -1,7 +1,9 @@
 package authlogin
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"strconv"
 
 	"github.com/astaxie/beego"
@@ -19,8 +21,11 @@ type AdminController struct {
 
 func (this *AdminController) Prepare() {
 	this.AdminBaseController.Prepare()
-	this.LayoutSections = make(map[string]string)
-	this.LayoutSections["Head"] = "authlogin/head.tpl"
+
+	//this.LayoutSections = make(map[string]string)
+
+	//this.LayoutSections["LayoutContent"] = "authlogin/layout.tpl"
+	//this.LayoutSections["HtmlHead"] = "blogs/html_head.tpl"
 }
 
 func init() {
@@ -58,14 +63,14 @@ func (this *AdminController) Get() {
 				}
 			}
 		}
-		this.Data["authModes"] = authModes
+		this.Data["authmodes"] = authModes
 		nameFromarts := []*selects{
 			&selects{"0", ops.nameFromart == 0, "姓+名"},
 			&selects{"1", ops.nameFromart == 1, "名+姓"},
 			&selects{"2", ops.nameFromart == 2, "名"},
 			&selects{"3", ops.nameFromart == 3, "姓"},
 		}
-		this.Data["nameFromarts"] = nameFromarts
+		this.Data["namefromarts"] = nameFromarts
 		this.Data["Title"] = cnf.String("options::title")
 		this.TplNames = "authlogin/options.html"
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
@@ -101,9 +106,9 @@ func (this *AdminController) Post() {
 	action := this.Ctx.Input.Param(":action")
 	switch action {
 	case "": // 全局配置
-		ops.authMode = this.GetString("authMode")
+		ops.authMode = this.GetString("authmode")
 
-		ops.nameFromart, _ = this.GetInt("nameFromart")
+		ops.nameFromart, _ = this.GetInt("namefromart")
 
 		ops.Write()
 
@@ -174,13 +179,50 @@ func (this *AdminController) Patch() {
 }
 
 func (this *options) Read() {
-	ops.authMode = cnf.DefaultString("options::authMode", "")
-	ops.nameFromart = cnf.DefaultInt("options::nameFromart", 0)
+	ops.authMode = cnf.DefaultString("options::authmode", "")
+	ops.nameFromart = cnf.DefaultInt("options::namefromart", 0)
 	fmt.Println(ops.authMode)
 }
 
 func (this *options) Write() {
-	cnf.Set("options::authMode", ops.authMode)
-	cnf.Set("options::nameFromart", strconv.Itoa(ops.nameFromart))
+	cnf.Set("options::authmode", ops.authMode)
+	cnf.Set("options::namefromart", strconv.Itoa(ops.nameFromart))
 	cnf.SaveConfigFile("conf/authlogin.conf")
+}
+
+//自定义Admin渲染
+func (this *AdminController) RenderHtml(tplfile string) {
+	this.TplNames = "authlogin/layout.tpl"
+	//f, err := ioutil.ReadFile(path.Join(beego.ViewsPath, tplfile))
+	//if err != nil {
+	//	fmt.Printf("%s\n", err)
+	//	panic(err)
+	//}
+
+	//mContent, err := template.ParseFiles(path.Join(beego.ViewsPath, tplfile))
+	//fmt.Println(mContent.Templates())
+	//this.Data["AdminContent"] = template.HTML(string(f))
+
+	//_, err := template.New("authlogin/paginator.tpl").ParseFiles(path.Join(beego.ViewsPath, "authlogin/paginator.tpl"))
+	//mContent, err := template.ParseFiles(path.Join(beego.ViewsPath, tplfile))
+	//if err != nil {
+	//	fmt.Printf("%s\n", err)
+	//	panic(err)
+	//}
+
+	var buf bytes.Buffer
+
+	err := beego.BeeTemplates[tplfile].ExecuteTemplate(&buf, tplfile, &this.Data)
+	//err = mContent.ExecuteTemplate(&buf, tplfile, &this.Data)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		panic(err)
+	}
+	this.Data["AdminContent"] = template.HTML(buf.String())
+}
+
+func (this *AdminController) Render() error {
+	this.RenderHtml(this.TplNames)
+	err := this.Controller.Render()
+	return err
 }
