@@ -38,24 +38,6 @@ func init() {
 	orm.RegisterModel(new(LdapConnector))
 }
 
-//空表时增加默认LdapConnector(本地连接)
-func AddLdapConnectorDefaultData() *LdapConnector {
-	u := LdapConnector{Name: ""}
-	o := orm.NewOrm()
-	err := o.Read(&u, "Name")
-	if err != nil {
-		l := LdapConnector{Name: ""}
-		_, er := AddLdapConnector(&l)
-		if er != nil {
-			fmt.Println("add LdapConnector error:%s", er)
-			return nil
-		} else {
-			return &l
-		}
-	}
-	return &u
-}
-
 func GetLdapConnectorCount() (count int64, err error) {
 	o := orm.NewOrm()
 	count, err = o.QueryTable("ldapConnector").Count()

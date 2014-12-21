@@ -1,10 +1,8 @@
 package models
 
 import (
-	"crypto/sha1"
 	"errors"
 	"fmt"
-	"io"
 	"reflect"
 
 	"github.com/astaxie/beego/orm"
@@ -37,18 +35,7 @@ func init() {
 	orm.RegisterModel(new(User))
 }
 
-//空表时增加默认管理帐号
-func AddUserDefaultData(m *User) {
-	ldapcnn := AddLdapConnectorDefaultData()
-	m.Password = Sha1(m.Password)
-	m.Ldap = ldapcnn
 
-	_, er := AddUser(m)
-	if er != nil {
-		fmt.Println("add user error:%s", er)
-	}
-
-}
 
 func GetUserCount() (count int64, err error) {
 	o := orm.NewOrm()
@@ -184,11 +171,4 @@ func GetAllUser(query map[string]string, fields []string, sortby []string, order
 		return ml, count, nil
 	}
 	return nil, count, err
-}
-
-//对字符串进行SHA1哈希
-func Sha1(data string) string {
-	t := sha1.New()
-	io.WriteString(t, data)
-	return fmt.Sprintf("%x", t.Sum(nil))
 }

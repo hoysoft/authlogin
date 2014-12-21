@@ -3,6 +3,7 @@ package authlogin
 import (
 	"fmt"
 
+	"github.com/hoysoft/authlogin/helpers"
 	"github.com/hoysoft/authlogin/models"
 	//"github.com/stesla/ldap"
 	//"github.com/mavricknz/ldap"
@@ -66,7 +67,7 @@ func (this *LdapController) Get() {
 		//count, _ := GetUserCount()
 		_ = this.SetPaginator(int(limit), count)
 
-		this.Data["Title"] = cnf.String("ldap_all::title")
+		this.Data["Title"] = helpers.Cnf.String("ldap_all::title")
 		this.TplNames = "authlogin/ldap_all.html"
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
@@ -77,7 +78,7 @@ func (this *LdapController) Get() {
 	case "add": //LDAP新增
 		ld := models.LdapConnector{}
 		this.Data["ldap"] = ld
-		this.Data["Title"] = cnf.String("ldap_add::title")
+		this.Data["Title"] = helpers.Cnf.String("ldap_add::title")
 		this.TplNames = "authlogin/ldap_edit.html"
 
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
@@ -98,7 +99,7 @@ func (this *LdapController) Get() {
 		}
 		fmt.Println("ldd:", ld)
 		this.Data["ldap"] = ld
-		this.Data["Title"] = cnf.String("ldap_edit::title")
+		this.Data["Title"] = helpers.Cnf.String("ldap_edit::title")
 		this.TplNames = "authlogin/ldap_edit.html"
 
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {

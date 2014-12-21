@@ -1,18 +1,73 @@
-
-<h1>{{.Title}}</h1>
- <hr style="padding-top:-10px;">
-<center>
-<form  method="post">
-<label for="account">Account: </label>
-<input type="text" name="account" id="account" value="{{.uaccount}}" placeholder="(Enter your Account)"><br>
-<label for="password">Password: </label>
-<input type="password" name="password" id="password" value="" placeholder="(Enter your password)"><br>
-<input type='checkbox' name='save_login' value='1' checked='checked'/> 记住我的登录信息<br>
-<br>
-<a href="/user/reset-pwd">忘记登录密码？</a> 
  
-<input type='button' onClick="javascript:location.href='/user/add'" value='新用户注册'/> 
-<input type="submit" value="登录">
+		<div class="col-md-12">
+			<h1 class="margin-bottom-15">{{.cnf.DefaultString "user::login" "Login"}}</h1>
+			<form class="form-horizontal templatemo-container templatemo-login-form-1 margin-bottom-30" role="form" action="#" method="post">				
+		       {{if .Message}} 
+                <p class="triangle-obtuse">{{ .Message}} </p>
+            <br /> {{end}} 
+				  <div class="form-group">
+		          <div class="col-xs-12">		            
+		            <div class="control-wrapper">
+		            	<label for="account" class="control-label fa-label"><i class="glyphicon glyphicon-user"></i></label>
+		            	<input type="text" class="form-control" name="account" id="account" value="{{.uaccount}}" placeholder= '{{.cnf.DefaultString "default::account.holder" "Enter your Account or Email"}}' >
+		            </div>	
+					{{if .msg_account}}  
+                     <p class="triangle-border top">{{.msg_account}}.</p>
+				    {{end}} 	            	            
+		          </div>              
+		        </div> 
+		        <div class="form-group">
+		          <div class="col-md-12">
+		          	<div class="control-wrapper">
+		            	<label for="password" class="control-label fa-label"><i class="glyphicon glyphicon-lock"></i></label>
+		            	<input type="password" class="form-control" name="password" id="password" placeholder='{{.cnf.DefaultString "user::password.holder" "Enter your Password"}}'>
+		            </div>
+					{{if .msg_passwd}} 
+                    <p class="triangle-border top">{{.msg_passwd}}.</p>
+                    {{end}} 
+		          </div>
+		        </div>
+		        <div class="form-group">
+		          <div class="col-md-12">
+	             	<div class="checkbox control-wrapper">
+	                	<label>
+	                  		<input type="checkbox"> {{.cnf.DefaultString "user::rememberme" "Remember me"}}
+                		</label>
+	              	</div>
+		          </div>
+		        </div>
+		        <div class="form-group">
+		          <div class="col-md-12">
+		          	<div class="control-wrapper">
+		          		<input type="submit" value='{{.cnf.DefaultString "user::btnLogin" "Log in"}}' class="btn btn-info">
+		          		<a href="/user/forgot_passwd" class="text-right pull-right">
+						{{.cnf.DefaultString "user::Forgotpassword" "Forgot password?"}}
+						</a>
+		          	</div>
+		          </div>
+		        </div>
+		        <hr>
+		        <div class="form-group">
+		        	<div class="col-md-12">
+		        		<label>Login with: </label>
+		        		<div class="inline-block">
+		        			<a href="#"><i class="fa glyphicon glyphicon-user login-with"></i></a>
 
-</form>
-</center>
+		        		</div>		        		
+		        	</div>
+		        </div>
+		      </form>
+		      <div class="text-center">
+		      	<a href="/user/add" class="templatemo-create-new">{{.cnf.DefaultString "user::CreateNewAccount" "Create new account"}}<i class="fa fa-arrow-circle-o-right"></i></a>	
+		      </div>
+		</div>
+ 
+
+ 
+ 
+ {{template "authlogin/css.tpl" .}}
+{{template "authlogin/templatemo_style.css.tpl" .}}
+
+
+
+ 

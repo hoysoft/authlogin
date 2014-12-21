@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/config"
 	"github.com/astaxie/beego/orm"
 	"github.com/astaxie/beego/session"
+	"github.com/hoysoft/authlogin/helpers"
 	"github.com/hoysoft/authlogin/models"
 )
 
@@ -39,9 +39,6 @@ var (
 	user_count             int
 	actionMethodBefoerFunc ActionMethodBefoerFunc
 
-	cnf config.ConfigContainer
-	ops options
-
 	BeforeAuthFilter map[string]*AuthFilter
 )
 
@@ -52,7 +49,7 @@ func Before_auth(url string) *AuthFilter {
 }
 
 //不登录验证
-func (a *AuthFilter) UnLogin() *AuthFilter {
+func (a *AuthFilter) NonLogin() *AuthFilter {
 	a.login = false
 	return a
 }
@@ -113,11 +110,6 @@ func init() {
 	cpFile("views", path.Join(beego.ViewsPath, "authlogin"))
 	cpFile("conf", "conf")
 
-	//读取authlogin配置
-	cnf, _ = config.NewConfig("ini", "conf/authlogin.conf")
-	ops = options{}
-	ops.Read()
-
 	globalSessions, _ = session.NewManager("memory", `{"cookieName":"gosessionid", "enableSetCookie,omitempty": true, "gclifetime":3600, "maxLifetime": 3600, "secure": false, "sessionIDHashFunc": "sha1", "sessionIDHashKey": "booksmanage", "cookieLifeTime": 3600, "providerConfig": ""}`)
 	go globalSessions.GC()
 
@@ -164,7 +156,7 @@ func CheckLogin(this *beego.Controller) (l *LoginUser, IsContinue bool) {
 		LUser.User, e = models.GetUserById(userid.(int))
 		fmt.Println("UUU:", LUser.User)
 		if LUser.User != nil && e == nil {
-			switch cnf.DefaultInt("options:namefromart", 0) {
+			switch helpers.Cnf.DefaultInt("options:namefromart", 0) {
 			case 0: //"姓+名"
 				LUser.DisplayName = LUser.User.LastName + LUser.User.FirstName
 			case 1: // "名+姓"
@@ -192,9 +184,9 @@ func AuthLogin(this *AdminBaseController, account string, password string) *mode
 	var err error
 	o := orm.NewOrm()
 
-	if err = o.QueryTable("ldap_connector").Filter("Name", ops.authMode).One(&ldap); err == nil {
-		err = o.QueryTable("user").Filter("Ldap", &ldap).Filter("Account", account).Filter("password", models.Sha1(password)).One(&user)
-		if err != nil && &user != nil {
+	if err = o.QueryTable("ldap_connector").Filter("id", helpers.Ops.AuthMode).One(&ldap); err == nil {
+		err = o.QueryTable("user").Filter("Ldap", &ldap).Filter("Account", account).Filter("password", helpers.Sha1(password)).One(&user)
+		if err == nil && &user != nil {
 			// 更新用户最后登录时间信息.
 			user.Lastlogintime = time.Now()
 			models.UpdateUserById(&user)
@@ -203,7 +195,7 @@ func AuthLogin(this *AdminBaseController, account string, password string) *mode
 		}
 	}
 
-	return &user
+	return nil
 }
 
 func Redirect_HttpReferer(this *beego.Controller) {

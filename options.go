@@ -4,16 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"strconv"
+
+	"strings"
 
 	"github.com/astaxie/beego"
+	"github.com/hoysoft/authlogin/helpers"
 	"github.com/hoysoft/authlogin/models"
 )
-
-type options struct {
-	authMode    string //认证方式，空-本地用户，其他-ldap方式
-	nameFromart int    //姓名显示格式
-}
 
 type AdminController struct {
 	AdminBaseController
@@ -21,6 +18,14 @@ type AdminController struct {
 
 func (this *AdminController) Prepare() {
 	this.AdminBaseController.Prepare()
+	this.Data["cnf"] = helpers.Cnf
+
+	tags := strings.Split(this.Ctx.Request.URL.Path, "/")
+	if len(tags) > 1 {
+		this.Data["__Tag"] = tags[1]
+	} else {
+		this.Data["__Tag"] = ""
+	}
 
 	//this.LayoutSections = make(map[string]string)
 
@@ -33,13 +38,7 @@ func init() {
 	beego.Router("/admin", &AdminController{})
 	beego.Router("/admin/:action", &AdminController{})
 
-	Before_auth(beego.UrlFor("AdminController.Get", ":action", "new")).UnLogin()
-}
-
-type selects struct {
-	Id         string
-	IsSelected bool
-	Value      string
+	Before_auth(beego.UrlFor("AdminController.Get", ":action", "new")).NonLogin()
 }
 
 //POST   /uri     创建
@@ -51,27 +50,16 @@ func (this *AdminController) Get() {
 	action := this.Ctx.Input.Param(":action")
 	switch action {
 	case "": // 全局配置
-		this.Data["Ops"] = ops
-		authModes := []*selects{}
-		ldaps := models.GetAllLdapConnector_sm()
-		if ldaps != nil {
-			for _, ldap := range *ldaps {
-				if ldap.Name == "" {
-					authModes = append(authModes, &selects{ldap.Name, ops.authMode == ldap.Name, "本地用户"})
-				} else {
-					authModes = append(authModes, &selects{ldap.Name, ops.authMode == ldap.Name, ldap.Name})
-				}
-			}
-		}
-		this.Data["authmodes"] = authModes
-		nameFromarts := []*selects{
-			&selects{"0", ops.nameFromart == 0, "姓+名"},
-			&selects{"1", ops.nameFromart == 1, "名+姓"},
-			&selects{"2", ops.nameFromart == 2, "名"},
-			&selects{"3", ops.nameFromart == 3, "姓"},
+		this.Data["Ops"] = helpers.Ops
+		this.Data["authmodes"] = helpers.GetAuthModes()
+		nameFromarts := []*helpers.Select{
+			&helpers.Select{"0", helpers.Ops.NameFromart == 0, "姓+名"},
+			&helpers.Select{"1", helpers.Ops.NameFromart == 1, "名+姓"},
+			&helpers.Select{"2", helpers.Ops.NameFromart == 2, "名"},
+			&helpers.Select{"3", helpers.Ops.NameFromart == 3, "姓"},
 		}
 		this.Data["namefromarts"] = nameFromarts
-		this.Data["Title"] = cnf.String("options::title")
+		this.Data["Title"] = helpers.Cnf.String("options::title")
 		this.TplNames = "authlogin/options.html"
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
@@ -86,7 +74,7 @@ func (this *AdminController) Get() {
 		eUser := models.User{}
 
 		this.Data["eUser"] = &eUser
-		this.Data["Title"] = cnf.String("options::newadmin")
+		this.Data["Title"] = helpers.Cnf.String("options::newadmin")
 		this.TplNames = "authlogin/user_edit.html"
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
@@ -106,11 +94,12 @@ func (this *AdminController) Post() {
 	action := this.Ctx.Input.Param(":action")
 	switch action {
 	case "": // 全局配置
-		ops.authMode = this.GetString("authmode")
 
-		ops.nameFromart, _ = this.GetInt("namefromart")
+		helpers.Ops.AuthMode, _ = this.GetInt("authmode")
 
-		ops.Write()
+		helpers.Ops.NameFromart, _ = this.GetInt("namefromart")
+
+		helpers.Ops.Write()
 
 		this.Get()
 		break
@@ -150,7 +139,7 @@ func (this *AdminController) Post() {
 		//	return
 		//}
 
-		models.AddUserDefaultData(&u)
+		helpers.AddUserDefaultData(&u)
 		//跳转到前面操作页面
 		Redirect_HttpReferer(&this.Controller)
 		break
@@ -178,18 +167,6 @@ func (this *AdminController) Patch() {
 
 }
 
-func (this *options) Read() {
-	ops.authMode = cnf.DefaultString("options::authmode", "")
-	ops.nameFromart = cnf.DefaultInt("options::namefromart", 0)
-	fmt.Println(ops.authMode)
-}
-
-func (this *options) Write() {
-	cnf.Set("options::authmode", ops.authMode)
-	cnf.Set("options::namefromart", strconv.Itoa(ops.nameFromart))
-	cnf.SaveConfigFile("conf/authlogin.conf")
-}
-
 //自定义Admin渲染
 func (this *AdminController) RenderHtml(tplfile string) {
 	this.TplNames = "authlogin/layout.tpl"
@@ -210,15 +187,17 @@ func (this *AdminController) RenderHtml(tplfile string) {
 	//	panic(err)
 	//}
 
-	var buf bytes.Buffer
+	if beego.BeeTemplates[tplfile] != nil {
+		var buf bytes.Buffer
 
-	err := beego.BeeTemplates[tplfile].ExecuteTemplate(&buf, tplfile, &this.Data)
-	//err = mContent.ExecuteTemplate(&buf, tplfile, &this.Data)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		panic(err)
+		err := beego.BeeTemplates[tplfile].ExecuteTemplate(&buf, tplfile, &this.Data)
+		//err = mContent.ExecuteTemplate(&buf, tplfile, &this.Data)
+		if err != nil {
+			fmt.Printf("%s\n", err)
+			panic(err)
+		}
+		this.Data["AdminContent"] = template.HTML(buf.String())
 	}
-	this.Data["AdminContent"] = template.HTML(buf.String())
 }
 
 func (this *AdminController) Render() error {

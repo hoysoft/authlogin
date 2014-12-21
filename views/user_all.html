@@ -1,42 +1,26 @@
+<link href="http://behigh.github.io/bootstrap_dropdowns_enhancement/css/dropdowns-enhancement.css" rel="stylesheet">
+<script src="http://behigh.github.io/bootstrap_dropdowns_enhancement/js/dropdowns-enhancement.min.js"></script>
 
-<style>
+<ul class="nav nav-pills" role="tablist">
+  <li role="presentation" class="dropdown active">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#" id="dropdown-source" >
+       {{.authmode}} <span class="caret"></span>
+    </a>
+	<ul class="dropdown-menu" role="menu">
+	{{range .authmodes}}
+	     <li>
+		  <input type="radio" id="us1_{{.Id}}" name="us1" value="{{.Id}}" onclick="switchsource(this.value)" {{if .IsSelected}} checked{{end}}  />
+          <label for="us1_{{.Id}}">{{.Value}}</label>
+         </li>
+    {{end}} 
+    </ul>
+  </li>
+  <li role="presentation" id="btn_adduser"><a href="/user/add">新增用户</a></li>
+  <li role="presentation" id="btn_synuser" style="display:none"><a href="/user/sync">LDAP同步</a></li>
+  <li role="presentation"><a href="/user/import">导入</a></li>
+  <li role="presentation"><a href="/user/export">导出</a></li>
+</ul>
 
-.div1 {width:100%;overflow:hidden;zoom:1;}
-.div2 {float:left;}
-
-
-.div3 {float:right;padding-top:35px;display:inline;text-align:center; }
-.div3 select {float:right;display:inline;}
-.div4  {float:right;display:inline;}
-th {text-align:center}
-td {text-align:center}
-</style>
-<div class="div1" >
-	<div class="div2"><h1>{{.Title}}</h1></div>
-	<div class="div3"> 
-	<div>
-	    <select class="form-horizontal form-control input-sm" name="category" id="category" onchange="switchsource(this.value)" style="width: 100px">
-     {{range .usersources}}
-     <option value={{.Id}} {{if .IsSelected}} select="selected"{{end}}>{{.Value}}</option>
-     {{end}}
-    </select>
-	</div>
-	<div class="div4">
-	 <button id="btn_adduser"  onClick="javascript:location.href='/user/add';">新增用户</button>
-	 <button id="btn_synuser"  onClick="javascript:location.href='/user/sync';" style="display:none" >同步用户</button>
-	 <button id="btn_exportuser"  onClick="javascript:location.href='/user/export';">导出用户</button>
-     <button id="btn_importuser"  onClick="javascript:location.href='/user/import';">导入用户</button>
-    </div>
-	&nbsp;
-
-    
-   
-	
-	
-
-	</div>
-	
-</div>
  <hr style="padding-top:-10px;">
 
 
@@ -54,16 +38,16 @@ td {text-align:center}
     {{range .Users}}
     <tr><td>{{.Account}}</td><td>{{.LastName}}</td><td>{{.FirstName}}</td><td>{{.Email}}</td><td>{{.Createdtime.Format "2006-01-02 15:04:05" }}</td><td>{{.Lastlogintime.Format "2006-01-02 15:04:05"}}</td><td>{{.Status}}</td>
 	<td><span class="action">
-	<a href="/user/edit/{{.Id}}">修改</a></span>&nbsp;<span class="action"><a href="/user/delete/{{.Id}}"   onclick="return confirm('确实要删除吗?')">删除</a></span>&nbsp;<span class="action"><a href="/user/delete/{{.Id}}">锁定</a></span></td></tr>
+	<a  data-method="update"  href="/user/{{.Id}}">修改</a></span>&nbsp;<span class="action"><a href="/user/delete/{{.Id}}"   onclick="return confirm('确实要删除吗?')">删除</a></span>&nbsp;<span class="action"><a href="/user/delete/{{.Id}}">锁定</a></span></td></tr>
     {{end}}
 </tbody>
 </table><!-- End .user-list -->
 
- 
 {{template "authlogin/paginator.tpl" .}}
 <script language="javascript">
 function switchsource(v)
 {
+	//alert("mmm")
     if (v=="0") {
 		document.getElementById("btn_adduser").style.display="block"; 
 		document.getElementById("btn_synuser").style.display="none";   
@@ -72,5 +56,6 @@ function switchsource(v)
       document.getElementById("btn_adduser").style.display="none"; 
 		document.getElementById("btn_synuser").style.display="block";   
     }
+	window.location.href="?m="+v;
 }</script >
  

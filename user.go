@@ -7,6 +7,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/coscms/xweb/validation"
 	"github.com/hoysoft/authlogin/models"
+		"github.com/hoysoft/authlogin/helpers"
 	//"github.com/coscms/forms"
 
 	"strings"
@@ -43,10 +44,13 @@ func init() {
 	beego.Router("/user", &UserController{})
 	beego.Router("/user/:action", &UserController{})
 	beego.Router("/user/:action/:id", &UserController{})
+	beego.Router("/user/:id", &UserController{})
 
 	//Before_auth(beego.UrlFor("UserController.Get", ":action", "login")).UnLogin()
 
-	Before_auth("/user/login").UnLogin()
+	Before_auth("/user/login").NonLogin()
+	Before_auth("/user/add").NonLogin()
+	Before_auth("/user/forgot_passwd").NonLogin()
 }
 
 func readFile(pathfilename string) string {
@@ -100,14 +104,35 @@ type Form_User_login struct {
 	SkipThis  int    `form_options:"-"`
 }
 
+func (this *UserController) Update() {
+	fmt.Println("UpdateUpdateUpdateUpdateUpdate")
+}
+
 func (this *UserController) Get() {
 	sess, _ := globalSessions.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
 	defer sess.SessionRelease(this.Ctx.ResponseWriter)
 
 	action := this.Ctx.Input.Param(":action") // 用户的添加、修改或删除
-	this.Data["cnf"] = cnf
+	this.Data["cnf"] = helpers.Cnf
 	switch action {
 	case "": //用户列表
+	    m := this.Ctx.Request.URL.Query().Get("m")//authmodename
+		
+		if m=="" {
+			m=strconv.Itoa(helpers.Ops.AuthMode)
+		}
+		aM,_:=strconv.Atoi(m)
+		this.Data["authmodes"] =helpers.GetAuthModes()
+		conn,_:=models.GetLdapConnectorById(aM)
+		this.Data["authmode"]=conn.Name
+        //if helpers.Ops.AuthMode=="" {
+	       //this.Data["authmode"]= "本地用户"
+        // } else{
+			//this.Data["authmode"]=helpers.Ops.AuthMode
+		//}
+
+       
+		
 		p := this.Ctx.Request.URL.Query().Get("p")
 		pageNo, _ := strconv.Atoi(p)
 		if pageNo == 0 {
@@ -120,7 +145,7 @@ func (this *UserController) Get() {
 		var limit int64 = 6 //每页10行显示
 		var offset int64 = (int64(pageNo) - 1) * limit
 		//var query map[string]string = map[string]string{"source": "0"}
-		var query map[string]string = map[string]string{}
+		var query map[string]string = map[string]string{"ldap_id":m}
 		users, count, _ := models.GetAllUser(query, fields, sortby, order, offset, limit)
 		//fmt.Println("user:", users)
 		this.Data["Users"] = &users
@@ -140,7 +165,7 @@ func (this *UserController) Get() {
 			&category{"2", false, "锁定"},
 		}
 		this.Data["userstates"] = userstates
-		this.Data["Title"] = cnf.String("user_all::title")
+		this.Data["Title"] = helpers.Cnf.String("user_all::title")
 		this.TplNames = "authlogin/user_all.html"
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
@@ -195,13 +220,13 @@ func (this *UserController) Get() {
 
 		}
 		this.Data["eUser"] = &eUser
-		this.Data["Title"] = cnf.String("user_edit::title")
+		this.Data["Title"] = helpers.Cnf.String("user_edit::title")
 		this.TplNames = "authlogin/user_edit.html"
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
 	case "import": //导入用户列表
-		this.Data["Title"] = cnf.String("user_import::title")
+		this.Data["Title"] = helpers.Cnf.String("user_import::title")
 		this.TplNames = "authlogin/user_import.html"
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
@@ -220,7 +245,7 @@ func (this *UserController) Get() {
 		if Http_referer != "" {
 			setSessions(&this.Controller, "http_referer", Http_referer)
 		}
-		this.Data["Title"] = cnf.String("login::title")
+		this.Data["Title"] = helpers.Cnf.String("login::title")
 
 		this.TplNames = "authlogin/login.html"
 		//this.RenderHtml("authlogin/login.html")
@@ -239,7 +264,7 @@ func (this *UserController) Get() {
 		break
 	case "add": //注册用户
 
-		this.Data["Title"] = cnf.String("user_add::title")
+		this.Data["Title"] = helpers.Cnf.String("user_add::title")
 		this.TplNames = "authlogin/user_add.html"
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
@@ -254,7 +279,11 @@ func (this *UserController) Get() {
 		models.DeleteUser(uid)
 
 		this.Ctx.WriteString("<script> history.back(1); </script>")
-	case "reset-pwd": //密码复位
+	case "forgot_passwd": //密码复位
+		this.TplNames = "authlogin/forgot_passwd.html"
+		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
+			return
+		}
 	case "logout": // 用户退出
 		sess.Delete("Uid")
 		this.TplNames = "authlogin/logout.html"
@@ -278,7 +307,7 @@ func (this *UserController) Post() {
 		rePassword := this.Input().Get("re-password") // 重复输入的密码
 
 		this.Data["eUser"] = &user
-		this.Data["Title"] = cnf.String("user_add::title")
+		this.Data["Title"] = helpers.Cnf.String("user_add::title")
 		this.TplNames = "authlogin/user_add.html"
 		// 检测E-mail或密码是否为空
 		if user.Email == "" || user.Account == "" {
@@ -338,7 +367,7 @@ func (this *UserController) Post() {
 
 		this.TplNames = "authlogin/user_edit.html"
 		this.Data["eUser"] = &user
-		this.Data["Title"] = cnf.String("user_edit::title")
+		this.Data["Title"] = helpers.Cnf.String("user_edit::title")
 		if runActionMethodBefoer(&this.AdminBaseController, "Post", action) {
 			return
 		}
@@ -358,7 +387,7 @@ func (this *UserController) Post() {
 
 		// 更新用户信息
 		if password != "" {
-			user.Password = models.Sha1(password)
+			user.Password = helpers.Sha1(password)
 		}
 		user.Updatedtime = time.Now()
 
@@ -395,23 +424,26 @@ func (this *UserController) Post() {
 	//	this.SaveToFile("user_file", "./static/files/"+"uploaded_file.txt")
 
 	case "login": // 用户登录
-
+		this.TplNames = "authlogin/login.html"
 		account := this.Ctx.Request.FormValue("account")   // 用户名
 		password := this.Ctx.Request.FormValue("password") // 用户密码
-		this.Data["Title"] = cnf.String("login::title")
+		this.Data["Title"] = helpers.Cnf.String("login::title")
+		this.Data["uaccount"] = account
+		runActionMethodBefoer(&this.AdminBaseController, "Get", action)
 		// 检测用户名或密码是否为空
-		if account == "" || password == "" {
-			this.Data["Message"] = "用户名或密码为空"
-			this.Ctx.Redirect(302, "/user/login")
+		if account == "" {
+			this.Data["msg_account"] = "用户名不能为空"
+			return
+		}
+		if password == "" {
+			this.Data["msg_passwd"] = "密码不能为空"
 			return
 		}
 		user := AuthLogin(&this.AdminBaseController, account, password)
 		if user == nil {
 			this.Data["Message"] = "用户名或密码错误！"
-			this.Ctx.Redirect(302, "/user/login")
 			return
 		} else {
-			this.Data["Message"] = "登录成功！"
 			// 保存用户登录信息
 			setSessions(&this.Controller, "Uid", user.Id)
 
