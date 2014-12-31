@@ -201,7 +201,9 @@ func (this *AdminController) RenderHtml(tplfile string) {
 }
 
 func (this *AdminController) Render() error {
-	this.RenderHtml(this.TplNames)
+	if !this.IsAjax() {
+		this.RenderHtml(this.TplNames)
+	}
 	err := this.Controller.Render()
 	return err
 }

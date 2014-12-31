@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/cache"
+	"github.com/astaxie/beego/utils/captcha"
 	"github.com/coscms/xweb/validation"
+	"github.com/hoysoft/authlogin/helpers"
 	"github.com/hoysoft/authlogin/models"
-		"github.com/hoysoft/authlogin/helpers"
 	//"github.com/coscms/forms"
 
 	"strings"
@@ -25,6 +27,8 @@ import (
 )
 
 var (
+	cpt *captcha.Captcha
+
 //globalSessions *session.Manager
 
 //loginHtmlString        string
@@ -39,6 +43,9 @@ type UserController struct {
 }
 
 func init() {
+	// use beego cache system store the captcha data
+	store := cache.NewMemoryCache()
+	cpt = captcha.NewWithFilter("/captcha/", store)
 
 	//增加路由
 	beego.Router("/user", &UserController{})
@@ -116,23 +123,21 @@ func (this *UserController) Get() {
 	this.Data["cnf"] = helpers.Cnf
 	switch action {
 	case "": //用户列表
-	    m := this.Ctx.Request.URL.Query().Get("m")//authmodename
-		
-		if m=="" {
-			m=strconv.Itoa(helpers.Ops.AuthMode)
+		m := this.Ctx.Request.URL.Query().Get("m") //authmodename
+
+		if m == "" {
+			m = strconv.Itoa(helpers.Ops.AuthMode)
 		}
-		aM,_:=strconv.Atoi(m)
-		this.Data["authmodes"] =helpers.GetAuthModes()
-		conn,_:=models.GetLdapConnectorById(aM)
-		this.Data["authmode"]=conn.Name
-        //if helpers.Ops.AuthMode=="" {
-	       //this.Data["authmode"]= "本地用户"
-        // } else{
-			//this.Data["authmode"]=helpers.Ops.AuthMode
+		aM, _ := strconv.Atoi(m)
+		this.Data["authmodes"] = helpers.GetAuthModes()
+		conn, _ := models.GetLdapConnectorById(aM)
+		this.Data["authmode"] = conn.Name
+		//if helpers.Ops.AuthMode=="" {
+		//this.Data["authmode"]= "本地用户"
+		// } else{
+		//this.Data["authmode"]=helpers.Ops.AuthMode
 		//}
 
-       
-		
 		p := this.Ctx.Request.URL.Query().Get("p")
 		pageNo, _ := strconv.Atoi(p)
 		if pageNo == 0 {
@@ -145,7 +150,7 @@ func (this *UserController) Get() {
 		var limit int64 = 6 //每页10行显示
 		var offset int64 = (int64(pageNo) - 1) * limit
 		//var query map[string]string = map[string]string{"source": "0"}
-		var query map[string]string = map[string]string{"ldap_id":m}
+		var query map[string]string = map[string]string{"ldap_id": m}
 		users, count, _ := models.GetAllUser(query, fields, sortby, order, offset, limit)
 		//fmt.Println("user:", users)
 		this.Data["Users"] = &users
@@ -166,7 +171,11 @@ func (this *UserController) Get() {
 		}
 		this.Data["userstates"] = userstates
 		this.Data["Title"] = helpers.Cnf.String("user_all::title")
-		this.TplNames = "authlogin/user_all.html"
+		if !this.IsAjax() {
+			this.TplNames = "authlogin/user_all.html"
+		} else {
+			this.TplNames = "authlogin/user_all.ajx.tpl"
+		}
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
@@ -226,11 +235,15 @@ func (this *UserController) Get() {
 			return
 		}
 	case "import": //导入用户列表
-		this.Data["Title"] = helpers.Cnf.String("user_import::title")
-		this.TplNames = "authlogin/user_import.html"
-		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
+		if !this.IsAjax() {
+			this.Ctx.Abort(404, "")
 			return
 		}
+
+		this.Data["action"] = this.Ctx.Request.RequestURI
+		this.Data["Title"] = helpers.Cnf.String("user_import::title")
+		this.TplNames = "authlogin/upload.ajx.tpl"
+
 	case "login": // 用户登录
 		if this.LoginUser != nil {
 			flash := beego.NewFlash()
@@ -263,9 +276,15 @@ func (this *UserController) Get() {
 		//this.RenderBytes(&buf)
 		break
 	case "add": //注册用户
+		if this.IsAjax() {
+			this.TplNames = "authlogin/user_edit.ajx.tpl"
+		} else {
+			this.Data["IsCreateUser"] = true
+			this.TplNames = "authlogin/user_add.html"
+		}
 
 		this.Data["Title"] = helpers.Cnf.String("user_add::title")
-		this.TplNames = "authlogin/user_add.html"
+
 		if runActionMethodBefoer(&this.AdminBaseController, "Get", action) {
 			return
 		}
@@ -396,28 +415,48 @@ func (this *UserController) Post() {
 
 		this.Ctx.Redirect(302, "/user/") // 返回用户列表页面
 	case "import": //导入用户列表
-		f, _, err := this.GetFile("user_file")
-		if err != nil {
-			fmt.Println(err)
+		this.Ctx.Request.ParseMultipartForm(8 << 20)
+		files := this.Ctx.Request.MultipartForm.File["file[]"]
+
+		for _, file := range files {
+			f, _ := file.Open()
+
+			fd, err := ioutil.ReadAll(f)
+			if err != nil {
+				this.Ctx.Abort(501, "ioutil error")
+				return
+			}
+			u := []models.User{}
+			if err := json.Unmarshal(fd, &u); err == nil {
+				//处理导入用户列表
+				addCount := 0
+				for _, r := range u {
+					_, err = models.AddUser(&r)
+					if err != nil {
+						fmt.Println(err)
+					} else {
+						addCount++
+					}
+				}
+				fmt.Println("addcount:", addCount)
+			} else {
+				this.Ctx.Abort(501, "Unmarshal error")
+
+				return
+			}
 		}
-		fd, err := ioutil.ReadAll(f)
+		this.Ctx.WriteString("ok")
+
+		//f, _, err := this.GetFile("file")
+		//if err != nil {
+		//	fmt.Println(err)
+		//}
+		//fmt.Println(f)
+
 		//fmt.Println(fd)
-		u := []models.User{}
+
 		//var u []User
 		//	json.Unmarshal(fd, &u)
-		if err := json.Unmarshal(fd, &u); err == nil {
-			//处理导入用户列表
-			addCount := 0
-			for _, r := range u {
-				_, err = models.AddUser(&r)
-				if err != nil {
-					fmt.Println(err)
-				} else {
-					addCount++
-				}
-			}
-			fmt.Println("addcount:", addCount)
-		}
 
 	//	fmt.Println(handler.Filename)
 	//fmt.Println(u)
@@ -425,11 +464,18 @@ func (this *UserController) Post() {
 
 	case "login": // 用户登录
 		this.TplNames = "authlogin/login.html"
+
 		account := this.Ctx.Request.FormValue("account")   // 用户名
 		password := this.Ctx.Request.FormValue("password") // 用户密码
 		this.Data["Title"] = helpers.Cnf.String("login::title")
 		this.Data["uaccount"] = account
 		runActionMethodBefoer(&this.AdminBaseController, "Get", action)
+		//验证码校验
+		if !cpt.VerifyReq(this.Ctx.Request) {
+			this.Data["msg_captcha"] = "验证码错误！"
+			return
+		}
+
 		// 检测用户名或密码是否为空
 		if account == "" {
 			this.Data["msg_account"] = "用户名不能为空"

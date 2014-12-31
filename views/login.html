@@ -27,6 +27,19 @@
                     {{end}} 
 		          </div>
 		        </div>
+				<div class="form-group">
+				  <div class="col-md-12">
+				    <div class="control-wrapper" style="float:left;">
+					    <label for="captcha" class="control-label fa-label"><i class="glyphicon glyphicon-ok"></i></label>
+				        <input type="text" class="form-control" name="captcha" id="captcha" placeholder="请输入验证码" style="width:120px;vertical-align:middle;"/>
+					</div>
+					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{create_captcha}}
+					{{if .msg_captcha}}  
+                  <p class="triangle-border top" style="width:120px">{{.msg_captcha}}.</p>
+				    {{end}} 
+				  </div>
+					
+		        </div>
 		        <div class="form-group">
 		          <div class="col-md-12">
 	             	<div class="checkbox control-wrapper">
@@ -36,10 +49,11 @@
 	              	</div>
 		          </div>
 		        </div>
+				
 		        <div class="form-group">
 		          <div class="col-md-12">
 		          	<div class="control-wrapper">
-		          		<input type="submit" value='{{.cnf.DefaultString "user::btnLogin" "Log in"}}' class="btn btn-info">
+		          		<input type="submit" id="_btnsubmit" value='{{.cnf.DefaultString "user::btnLogin" "Log in"}}' class="btn btn-info" disabled="true">
 		          		<a href="/user/forgot_passwd" class="text-right pull-right">
 						{{.cnf.DefaultString "user::Forgotpassword" "Forgot password?"}}
 						</a>
@@ -58,16 +72,58 @@
 		        </div>
 		      </form>
 		      <div class="text-center">
-		      	<a href="/user/add" class="templatemo-create-new">{{.cnf.DefaultString "user::CreateNewAccount" "Create new account"}}<i class="fa fa-arrow-circle-o-right"></i></a>	
+		      	<a href="/user/add" class="templatemo-create-new">{{.cnf.DefaultString "user::CreateNewAccount" "Create new account"}}&nbsp;<i class="glyphicon glyphicon-circle-arrow-right"></i></a>	
 		      </div>
 		</div>
  
+ 
 
- 
- 
+
  {{template "authlogin/css.tpl" .}}
 {{template "authlogin/templatemo_style.css.tpl" .}}
 
-
-
+<script language="javascript">
+ var $ = function(o) { 
+return document.getElementById(o) 
+}; 
  
+$('account').oninput = function() { 
+   UpdateStatus(); 
+};
+$('password').oninput = function() { 
+   UpdateStatus(); 
+};
+$('captcha').oninput = function() { 
+   UpdateStatus(); 
+};
+$('account').onpropertychange = function() { 
+  UpdateStatus(); 
+};
+$('password').onpropertychange = function() { 
+  UpdateStatus(); 
+};
+$('captcha').onpropertychange = function() { 
+   UpdateStatus(); 
+};
+// onpropertychange="UpdateStatus();" oninput="UpdateStatus();"
+function UpdateStatus(){
+	if (
+	document.getElementById("account").value!="" &&
+    document.getElementById("password").value!=""  &&
+	 document.getElementById("captcha").value!="" ){
+		 document.getElementById("_btnsubmit").removeAttribute("disabled");
+    }else {
+	  document.getElementById("_btnsubmit").disabled="true";
+	}
+};
+
+
+</script>
+
+<style type="text/css" >
+   .captcha-img,.captcha  {vertical-align:middle; width:120px;height:30px;}
+
+   .triangle-border, .top {
+	margin-left:30px;margin-bottom:-10px;
+    }
+</style> 

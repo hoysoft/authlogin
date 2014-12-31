@@ -251,7 +251,7 @@ func copyFile(dstPath, srcName, filename string) (written int64, err error) {
 }
 
 func runActionMethodBefoer(c *AdminBaseController, method string, action string) bool {
-	if actionMethodBefoerFunc != nil {
+	if !c.IsAjax() && actionMethodBefoerFunc != nil {
 		return actionMethodBefoerFunc(c, method, action)
 	}
 	return false

@@ -1,0 +1,27 @@
+
+<div class="col-md-12">
+			<h1 class="margin-bottom-15">{{.cnf.DefaultString "user::RestPassword" "Password Reset"}}</h1>
+			<form class="form-horizontal templatemo-forgot-password-form templatemo-container" role="form" action="#" method="post">	
+				<div class="form-group">
+		          <div class="col-md-12">
+				{{.cnf.DefaultString "user::RestPasswordDescription" "Please enter your email address that you registered in our website."}}	
+		          </div>
+		        </div>		
+		        <div class="form-group">
+		          <div class="col-md-12">
+		            <input type="text" class="form-control" id="email" placeholder='{{.cnf.DefaultString "default::email.holder" "Your email"}}'>	            
+		          </div>              
+		        </div>
+		        <div class="form-group">
+		          <div class="col-md-12">
+				
+		            <input type="submit" value='{{.cnf.DefaultString "default::Submit" "Submit"}}' class="btn btn-danger">
+                    <br><br>
+                    <a href="/user/login">{{.cnf.DefaultString "user::btnLogin" "Login"}} </a> |
+                    <a href="/user/add">{{.cnf.DefaultString "user::CreateAccount" "Create Account"}}</a>
+		          </div>
+		        </div>
+		    </form>
+</div>
+ 
+{{template "authlogin/templatemo_style.css.tpl" .}}
